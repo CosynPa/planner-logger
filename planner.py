@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
-import ipywidgets as widgets
 import datetime
+
+import ipywidgets as widgets
 
 
 class PlanItem:
@@ -145,16 +146,22 @@ class PlanController:
 
     @staticmethod
     def _time_str(seconds: Union[int, float]) -> str:
-        days, left = divmod(seconds, 86400)
-        hours, left = divmod(left, 3600)
-        minutes, left = divmod(left, 60)
+        def positive_time(positive_seconds: Union[int, float]) -> str:
+            days, left = divmod(positive_seconds, 86400)
+            hours, left = divmod(left, 3600)
+            minutes, left = divmod(left, 60)
 
-        if days != 0:
-            return "{day:d}d{hour:d}h{minute:d}min".format(day=int(days), hour=int(hours), minute=int(minutes))
-        elif hours != 0:
-            return "{hour:d}h{minute:d}min".format(hour=int(hours), minute=int(minutes))
+            if days != 0:
+                return "{day:d}d{hour:d}h{minute:d}min".format(day=int(days), hour=int(hours), minute=int(minutes))
+            elif hours != 0:
+                return "{hour:d}h{minute:d}min".format(hour=int(hours), minute=int(minutes))
+            else:
+                return "{minute:d}min".format(minute=int(minutes))
+
+        if seconds >= 0:
+            return positive_time(seconds)
         else:
-            return "{minute:d}min".format(minute=int(minutes))
+            return "-" + positive_time(-seconds)
 
     def _update_time(self):
         planning_finish: int = sum(item.time for item in self.plans if not item.is_finished)
@@ -169,11 +176,7 @@ class PlanController:
             if duration < 0:
                 duration += 86400
 
-            duration_minus_plan = duration - planning_finish
-            if duration_minus_plan >= 0:
-                duration_minus_plan_str = self._time_str(duration_minus_plan)
-            else:
-                duration_minus_plan_str = "-" + self._time_str(-duration_minus_plan)
+            duration_minus_plan_str = self._time_str(duration - planning_finish)
 
             self._time_left.value = "Time left: {}, -Plan: {}".format(self._time_str(duration), duration_minus_plan_str)
         except ValueError:
