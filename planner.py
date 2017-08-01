@@ -124,11 +124,12 @@ class PlanController:
         self._finish_time_label.value = "Planning to finish in: {}".format(time_helper.duration_str(planning_finish))
 
         time_type: TimeType
-        finish_time: datetime.datetime
-        time_type, finish_time = time_helper.parse_time(self._end_time_text.value)
+        nullable_finish_time: Optional[datetime.datetime]
+        nullable_finish_time, time_type,  = time_helper.parse_time(self._end_time_text.value)
         if time_type is TimeType.NONE:
             self._time_left.value = "Time left: "
         else:
+            finish_time: datetime.datetime = nullable_finish_time
             if not self._long_time_check.value:
                 now = datetime.datetime.now()
                 duration: float = (finish_time - now).total_seconds()

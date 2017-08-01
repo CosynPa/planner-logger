@@ -72,7 +72,7 @@ def duration_str(seconds: float) -> str:
         return "-" + positive_time(-seconds)
 
 
-def parse_time(time_string: str) -> Tuple[TimeType, datetime.datetime]:
+def parse_time(time_string: str) -> Tuple[Optional[datetime.datetime], TimeType]:
     formats = [
         ("%H:%M", TimeType.TIME),
 
@@ -83,6 +83,8 @@ def parse_time(time_string: str) -> Tuple[TimeType, datetime.datetime]:
         ("%Y-%m-%d %H:%M", TimeType.YEAR | TimeType.MONTH_DAY | TimeType.TIME)
     ]
 
+    the_time: Optional[datetime.datetime]
+    the_type: TimeType
     for a_format, a_type in formats:
         try:
             the_time = datetime.datetime.strptime(time_string, a_format)
@@ -92,12 +94,14 @@ def parse_time(time_string: str) -> Tuple[TimeType, datetime.datetime]:
         else:
             break
     else:
-        the_time = datetime.datetime.fromtimestamp(0)
+        the_time = None
         the_type = TimeType.NONE
 
-    if the_type is TimeType.TIME:
+    if the_type is TimeType.NONE:
+        pass
+    elif the_type is TimeType.TIME:
         the_time = datetime.datetime.combine(datetime.datetime.now().date(), the_time.time())
     elif TimeType.YEAR not in the_type:
         the_time = the_time.replace(year=datetime.datetime.now().year)
 
-    return the_type, the_time
+    return the_time, the_type
