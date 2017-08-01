@@ -12,7 +12,7 @@ class TimeType(Flag):
 
 def parse_duration(time_string: str) -> Optional[float]:
     """
-    Parse duration such as "2h30min". If parse failed, returns None. "0" is parsed as 0.
+    Parse duration such as "2h30m". If parse failed, returns None. "0" is parsed as 0.
     """
     days = time_string.split("d")
     day_number: Optional[float]
@@ -34,7 +34,7 @@ def parse_duration(time_string: str) -> Optional[float]:
     else:
         hour_number = None
 
-    minutes = hours[-1].split("min")
+    minutes = hours[-1].split("m")
     minute_number: Optional[float]
     if len(minutes) == 2:
         try:
@@ -60,11 +60,11 @@ def duration_str(seconds: float) -> str:
         minutes, left = divmod(left, 60)
 
         if days != 0:
-            return "{day:d}d{hour:d}h{minute:d}min".format(day=int(days), hour=int(hours), minute=int(minutes))
+            return "{day:d}d{hour:d}h{minute:d}m".format(day=int(days), hour=int(hours), minute=int(minutes))
         elif hours != 0:
-            return "{hour:d}h{minute:d}min".format(hour=int(hours), minute=int(minutes))
+            return "{hour:d}h{minute:d}m".format(hour=int(hours), minute=int(minutes))
         else:
-            return "{minute:d}min".format(minute=int(minutes))
+            return "{minute:d}m".format(minute=int(minutes))
 
     if seconds >= 0:
         return positive_time(seconds)
