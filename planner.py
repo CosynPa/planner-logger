@@ -1,5 +1,6 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple
 import datetime
+from enum import Flag, auto
 
 import ipywidgets as widgets
 
@@ -7,7 +8,7 @@ import ipywidgets as widgets
 class PlanItem:
     __slots__ = ["name", "time", "is_finished"]
 
-    def __init__(self, name: str, time: int, is_finished=False):
+    def __init__(self, name: str, time: float, is_finished=False):
         self.name = name
         self.time = time
         self.is_finished = is_finished
@@ -21,7 +22,7 @@ class PlanController:
         "_end_time_text",
         "_time_per_weekday_text",
         "_time_per_weekend_text",
-        "_long_time_box",
+        "_long_time_check",
         "_finish_time_label",
         "_time_left",
         "_plan_box",
@@ -65,7 +66,7 @@ class PlanController:
         self.container = container
         self._plan_text = plan_text
         self._end_time_text = end_time_text
-        self._long_time_box = long_time_box
+        self._long_time_check = long_time_check
         self._time_per_weekday_text = time_per_weekday_text
         self._time_per_weekend_text = time_per_weekend_text
         self._finish_time_label = finish_time_label
@@ -75,6 +76,8 @@ class PlanController:
         plan_text.observe(lambda change: self._plan_text_changed(change), "value")
         end_time_text.observe(lambda change: self._update_time(), "value")
         refresh_button.on_click(lambda button: self._update_time())
+        time_per_weekday_text.observe(lambda change: self._update_time(), "value")
+        time_per_weekend_text.observe(lambda change: self._update_time(), "value")
 
         def update_long_time(new_is_long_time):
             if new_is_long_time:
@@ -94,6 +97,49 @@ class PlanController:
         update_long_time(is_long_time)
 
     @staticmethod
+    def _parse_duration(time_str: str) -> Optional[float]:
+        """
+        Parse duration such as "2h30min". If parse failed, returns None. "0" is parsed as 0.
+        """
+        days = time_str.split("d")
+        day_number: Optional[float]
+        if len(days) == 2:
+            try:
+                day_number = float(days[0])
+            except ValueError:
+                day_number = None
+        else:
+            day_number = None
+
+        hours = days[-1].split("h")
+        hour_number: Optional[float]
+        if len(hours) == 2:
+            try:
+                hour_number = float(hours[0])
+            except ValueError:
+                hour_number = None
+        else:
+            hour_number = None
+
+        minutes = hours[-1].split("min")
+        minute_number: Optional[float]
+        if len(minutes) == 2:
+            try:
+                minute_number = float(minutes[0])
+            except ValueError:
+                minute_number = None
+        else:
+            minute_number = None
+
+        if day_number is None and hour_number is None and minute_number is None:
+            if time_str == "0":
+                return 0.
+            else:
+                return None
+        else:
+            return (day_number or 0.) * 86400. + (hour_number or 0.) * 3600. + (minute_number or 0.) * 60.
+
+    @staticmethod
     def _parse_plan(s: str) -> List[PlanItem]:
         def parse_item(item: str) -> Optional[PlanItem]:
             strings = item.split(" ")
@@ -110,43 +156,13 @@ class PlanController:
                     is_finished = False
                     name = " ".join(name_part)
 
-                days = time_part.split("d")
-
-                if len(days) == 2:
-                    try:
-                        day_number = float(days[0])
-                    except ValueError:
-                        day_number = 0
-                else:
-                    day_number = 0
-
-                hours = days[-1].split("h")
-
-                if len(hours) == 2:
-                    try:
-                        hour_number = float(hours[0])
-                    except ValueError:
-                        hour_number = 0
-                else:
-                    hour_number = 0
-
-                minutes = hours[-1].split("min")
-
-                if len(minutes) == 2:
-                    try:
-                        minute_number = float(minutes[0])
-                    except ValueError:
-                        minute_number = 0
-                else:
-                    minute_number = 0
-
-                return PlanItem(name, day_number * 24 * 3600 + hour_number * 3600 + minute_number * 60, is_finished)
+                return PlanItem(name, PlanController._parse_duration(time_part) or 0., is_finished)
 
         return [parsed for parsed in (parse_item(item) for item in s.split("\n")) if parsed is not None]
 
     @staticmethod
-    def _time_str(seconds: Union[int, float]) -> str:
-        def positive_time(positive_seconds: Union[int, float]) -> str:
+    def _time_str(seconds: float) -> str:
+        def positive_time(positive_seconds: float) -> str:
             days, left = divmod(positive_seconds, 86400)
             hours, left = divmod(left, 3600)
             minutes, left = divmod(left, 60)
@@ -164,23 +180,79 @@ class PlanController:
             return "-" + positive_time(-seconds)
 
     def _update_time(self):
-        planning_finish: int = sum(item.time for item in self.plans if not item.is_finished)
+        class TimeType(Flag):
+            NONE = 0
+            TIME = auto()
+            MONTH_DAY = auto()
+            YEAR = auto()
+
+        def parse_time(time_str: str) -> Tuple[TimeType, datetime.datetime]:
+            formats = [
+                ("%H:%M", TimeType.TIME),
+
+                ("%m-%d", TimeType.MONTH_DAY),
+                ("%Y-%m-%d", TimeType.YEAR | TimeType.MONTH_DAY),
+
+                ("%m-%d %H:%M", TimeType.MONTH_DAY | TimeType.TIME),
+                ("%Y-%m-%d %H:%M", TimeType.YEAR | TimeType.MONTH_DAY | TimeType.TIME)
+            ]
+
+            for a_format, a_type in formats:
+                try:
+                    the_time = datetime.datetime.strptime(time_str, a_format)
+                    the_type = a_type
+                except ValueError:
+                    pass
+                else:
+                    break
+            else:
+                the_time = datetime.datetime.fromtimestamp(0)
+                the_type = TimeType.NONE
+
+            if the_type is TimeType.TIME:
+                the_time = datetime.datetime.combine(datetime.datetime.now().date(), the_time.time())
+            elif TimeType.YEAR not in the_type:
+                the_time = the_time.replace(year=datetime.datetime.now().year)
+
+            return the_type, the_time
+
+        planning_finish: float = sum(item.time for item in self.plans if not item.is_finished)
 
         self._finish_time_label.value = "Planning to finish in: {}".format(self._time_str(planning_finish))
 
-        try:
-            finish_time = datetime.datetime.strptime(self._end_time_text.value, "%H:%M")
-            finish_datetime = datetime.datetime.combine(datetime.datetime.now().date(), finish_time.time())
-            now = datetime.datetime.now()
-            duration = (finish_datetime - now).total_seconds()
-            if duration < 0:
-                duration += 86400
-
-            duration_minus_plan_str = self._time_str(duration - planning_finish)
-
-            self._time_left.value = "Time left: {}, -Plan: {}".format(self._time_str(duration), duration_minus_plan_str)
-        except ValueError:
+        time_type: TimeType
+        finish_time: datetime.date
+        time_type, finish_time = parse_time(self._end_time_text.value)
+        if time_type is TimeType.NONE:
             self._time_left.value = "Time left: "
+        else:
+            if not self._long_time_check.value:
+                now = datetime.datetime.now()
+                duration: float = (finish_time - now).total_seconds()
+
+                duration_minus_plan_str = self._time_str(duration - planning_finish)
+                self._time_left.value = "Time left: {}, -Plan: {}".format(self._time_str(duration),
+                                                                          duration_minus_plan_str)
+            else:
+                now = datetime.datetime.now().date()
+                finish = finish_time.date()
+
+                if now > finish:
+                    self._time_left.value = "Time left: 0"
+                else:
+                    per_weekday = PlanController._parse_duration(self._time_per_weekday_text.value)
+                    per_weekday = per_weekday if per_weekday is not None else 86400.
+
+                    per_weekend = PlanController._parse_duration(self._time_per_weekend_text.value)
+                    per_weekend = per_weekend if per_weekend is not None else 86400.
+
+                    days = [now + datetime.timedelta(n) for n in range(finish.toordinal() - now.toordinal() + 1)]
+
+                    duration = sum(per_weekday if day.isoweekday() in range(1, 6) else per_weekend for day in days)
+
+                    duration_minus_plan_str = self._time_str(duration - planning_finish)
+                    self._time_left.value = "Time left: {}, -Plan: {}".format(self._time_str(duration),
+                                                                              duration_minus_plan_str)
 
     def _update_plan_box(self):
         def item_box(item: PlanItem, index: int) -> widgets.HBox:
