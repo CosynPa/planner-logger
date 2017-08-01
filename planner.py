@@ -36,16 +36,15 @@ class PlanController:
 
         plan_text = widgets.Textarea(layout=widgets.Layout(height="20rem", width="100%"))
 
-        end_time_title = widgets.Label(value="End time: ")
-        end_time_text = widgets.Text(value=end_time_string)
-        end_time_box = widgets.HBox(children=[end_time_title, end_time_text])
+        end_time_text = widgets.Text(value=end_time_string, description="End time:")
 
-        long_time_title = widgets.Label(value="Long time")
-        long_time_check = widgets.Checkbox(value=is_long_time, layout=widgets.Layout(width="20px"))
-        time_per_weekday_title = widgets.Label(value="Time per weekday: ", layout=widgets.Layout(width="150px"))
-        time_per_weekday_text = widgets.Text(value=time_per_weekday, layout=widgets.Layout(width="100px"))
-        time_per_weekend_title = widgets.Label(value="Time per weekend: ", layout=widgets.Layout(width="150px"))
-        time_per_weekend_text = widgets.Text(value=time_per_weekend, layout=widgets.Layout(width="100px"))
+        long_time_check = widgets.Checkbox(value=is_long_time, description="Long time")
+        time_per_weekday_text = widgets.Text(value=time_per_weekday,
+                                             description="Time per weekday:",
+                                             layout=widgets.Layout(width="250px"))
+        time_per_weekend_text = widgets.Text(value=time_per_weekend,
+                                             description="Time per weekend:",
+                                             layout=widgets.Layout(width="250px"))
         long_time_box = widgets.HBox()
 
         finish_time_label = widgets.Label(value="Planning to finish in: ", layout=widgets.Layout(width="100%"))
@@ -58,7 +57,7 @@ class PlanController:
 
         container = widgets.VBox()
         container.children = [plan_text,
-                              end_time_box, long_time_box, finish_time_label, time_left,
+                              end_time_text, long_time_box, finish_time_label, time_left,
                               plan_box, refresh_button]
 
         #
@@ -81,12 +80,12 @@ class PlanController:
 
         def update_long_time(new_is_long_time):
             if new_is_long_time:
-                long_time_box.children = [long_time_title, long_time_check,
-                                          time_per_weekday_title, time_per_weekday_text,
-                                          time_per_weekend_title, time_per_weekend_text
+                long_time_box.children = [long_time_check,
+                                          time_per_weekday_text,
+                                          time_per_weekend_text
                                           ]
             else:
-                long_time_box.children = [long_time_title, long_time_check]
+                long_time_box.children = [long_time_check]
             self._update_time()
 
         long_time_check.observe(lambda change: update_long_time(change["new"]), "value")
