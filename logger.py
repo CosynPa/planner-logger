@@ -54,17 +54,17 @@ class LogController:
 
         def update(is_appending: bool):
             def log_item_box(log_item: LogItem) -> widgets.HBox:
-                check_box = widgets.Checkbox(value=log_item.is_marked)
+                check_box = widgets.Checkbox(value=log_item.is_marked, layout=widgets.Layout(width="30px"))
                 name = widgets.Text(value=log_item.name)
 
                 start_text = log_item.start.strftime("%H:%M") if log_item.start is not None else ""
-                start = widgets.Text(value= start_text, description="Start:")
+                start = widgets.Text(value= start_text, description="Start:", layout=widgets.Layout(width="30%"))
 
                 end_text = log_item.end.strftime("%H:%M") if log_item.end is not None else ""
-                end = widgets.Text(value=end_text, description="End:")
+                end = widgets.Text(value=end_text, description="End:", layout=widgets.Layout(width="30%"))
 
-                start_now = widgets.Button(description="Now", layout=widgets.Layout(width="40px"))
-                end_now = widgets.Button(description="Now", layout=widgets.Layout(width="40px"))
+                start_now = widgets.Button(description="Now", layout=widgets.Layout(width="50px"))
+                end_now = widgets.Button(description="Now", layout=widgets.Layout(width="50px"))
 
                 duration_label = widgets.Label()
 

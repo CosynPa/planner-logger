@@ -165,7 +165,7 @@ class PlanController:
                 self._update_time()
                 self._update_plan_text()
 
-            check = widgets.Checkbox(value=item.is_finished, layout=widgets.Layout(width="20px"))
+            check = widgets.Checkbox(value=item.is_finished, layout=widgets.Layout(width="30px"))
             check.observe(on_check_changed, "value")
 
             name_text = item.name + " " + time_helper.duration_str(item.time)
