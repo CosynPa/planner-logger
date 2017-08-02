@@ -66,6 +66,13 @@ class LogController:
                 start_now = widgets.Button(description="Now", layout=widgets.Layout(width="40px"))
                 end_now = widgets.Button(description="Now", layout=widgets.Layout(width="40px"))
 
+                duration_label = widgets.Label()
+
+                def update_duration():
+                    duration_label.value = time_helper.duration_str(log_item.duration())
+
+                update_duration()
+
                 def on_check(change):
                     log_item.is_marked = change["new"]
                     update_summary()
@@ -80,6 +87,7 @@ class LogController:
 
                 def on_start_change(change):
                     log_item.start = time_helper.parse_time(change["new"])[0]
+                    update_duration()
                     update_summary()
 
                 start.observe(on_start_change, "value")
@@ -91,6 +99,7 @@ class LogController:
 
                 def on_end_change(change):
                     log_item.end = time_helper.parse_time(change["new"])[0]
+                    update_duration()
                     update_summary()
 
                 end.observe(on_end_change, "value")
@@ -101,7 +110,7 @@ class LogController:
                 end_now.on_click(on_end_now_click)
 
                 return widgets.HBox(children=[
-                    check_box, name, start, start_now, end, end_now
+                    check_box, name, start, start_now, end, end_now, duration_label
                 ])
 
             log_box.children = [log_item_box(item) for item in self.logs]
