@@ -42,17 +42,17 @@ class LogController:
 
         def on_plus_button_click(_):
             self.logs.append(LogItem("", "", ""))
-            update()
+            update(True)
 
         plus_button.on_click(on_plus_button_click)
 
         def on_clear_button_click(_):
             self.logs.clear()
-            update()
+            update(False)
 
         clear_button.on_click(on_clear_button_click)
 
-        def update():
+        def update(is_appending: bool):
             def log_item_box(log_item: LogItem) -> widgets.HBox:
                 check_box = widgets.Checkbox(value=log_item.is_marked)
                 name = widgets.Text(value=log_item.name)
@@ -113,7 +113,10 @@ class LogController:
                     check_box, name, start, start_now, end, end_now, duration_label
                 ])
 
-            log_box.children = [log_item_box(item) for item in self.logs]
+            if is_appending:
+                log_box.children = list(log_box.children) + [log_item_box(self.logs[-1])]
+            else:
+                log_box.children = [log_item_box(item) for item in self.logs]
 
             def update_summary():
                 class MergedItem:
@@ -151,4 +154,4 @@ class LogController:
 
             update_summary()
 
-        update()
+        update(False)
