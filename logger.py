@@ -157,28 +157,47 @@ class LogController:
                 if suspend_summary_update:
                     return
 
+                class MarkType(enum.Flag):
+                    HAS_ITEM_WITHOUT_MARK = enum.auto()
+                    HAS_ITEM_WITH_MARK = enum.auto()
+
                 class MergedItem:
-                    def __init__(self, name: str, duration: float):
+                    def __init__(self, name: str, duration: float, mark_type: MarkType):
                         self.name = name
                         self.duration = duration
+                        self.mark_type = mark_type
 
                 # Merge log items with the same name
                 merged_items: List[MergedItem] = []
                 for item in self.logs:
+                    mark_type = MarkType.HAS_ITEM_WITH_MARK if item.is_marked else MarkType.HAS_ITEM_WITHOUT_MARK
                     matched = next((merged for merged in merged_items if merged.name.lower() == item.name.lower()),
                                    None)
                     if matched is not None:
                         matched.duration += item.duration()
+                        matched.mark_type |= mark_type
                     else:
-                        merged_items.append(MergedItem(item.name, item.duration()))
+                        merged_items.append(MergedItem(item.name, item.duration(), mark_type))
 
-                item_strings = [
-                    item.name + " " + time_helper.duration_str(item.duration)
-                    for item in merged_items
-                ]
-                item_labels = [widgets.Label(value=item_str, layout=widgets.Layout(width="100%"))
-                               for item_str in item_strings
-                               ]
+                def item_html(item: MergedItem) -> widgets.HTML:
+                    plain_text = item.name + " " + time_helper.duration_str(item.duration)
+
+                    color: str
+                    if item.mark_type is MarkType.HAS_ITEM_WITH_MARK | MarkType.HAS_ITEM_WITHOUT_MARK:
+                        color = "#804000"
+                    elif item.mark_type is MarkType.HAS_ITEM_WITH_MARK:
+                        color = "#FF8000"
+                    elif item.mark_type is MarkType.HAS_ITEM_WITHOUT_MARK:
+                        color = "black"
+                    else:
+                        color = "black"
+                        assert False, "Unexpected mark_type {}".format(item.mark_type)
+
+                    html_text = '<p style="color:{}">{}</p>'.format(color, plain_text)
+
+                    return widgets.HTML(value=html_text, layout=widgets.Layout(width="100%"))
+
+                item_htmls = [item_html(item) for item in merged_items]
 
                 total = time_helper.duration_str(sum(item.duration() for item in self.logs))
                 total_marked = time_helper.duration_str(sum(item.duration() for item in self.logs if item.is_marked))
@@ -188,7 +207,7 @@ class LogController:
                     layout=widgets.Layout(width="100%")
                 )
 
-                summary_box.children = item_labels + [summary_label]
+                summary_box.children = item_htmls + [summary_label]
 
             update_summary()
 
