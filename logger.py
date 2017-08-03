@@ -41,7 +41,7 @@ class LogController:
         clear_button = widgets.Button(description="Clear")
         summary_box = widgets.VBox()
 
-        self.container = widgets.VBox(children=[log_box, remove_marks_button, plus_button, clear_button, summary_box])
+        self.container = widgets.VBox(children=[log_box, plus_button, remove_marks_button, clear_button, summary_box])
 
         class UpdateType(enum.Enum):
             APPEND = enum.auto()
