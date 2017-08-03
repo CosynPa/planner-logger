@@ -1,5 +1,7 @@
 import datetime
 from typing import List, Optional
+import enum
+import weakref
 
 import ipywidgets as widgets
 
@@ -34,31 +36,47 @@ class LogController:
         self.logs = _logs
 
         log_box = widgets.VBox()
+        remove_marks_button = widgets.Button(description="Remove marks")
         plus_button = widgets.Button(description="+")
         clear_button = widgets.Button(description="Clear")
         summary_box = widgets.VBox()
 
-        self.container = widgets.VBox(children=[log_box, plus_button, clear_button, summary_box])
+        self.container = widgets.VBox(children=[log_box, remove_marks_button, plus_button, clear_button, summary_box])
+
+        class UpdateType(enum.Enum):
+            APPEND = enum.auto()
+            RESET = enum.auto()
+            REMOVE_MARKS = enum.auto()
+
+        def on_remove_marks_click(_):
+            for item in self.logs:
+                item.is_marked = False
+            update(UpdateType.REMOVE_MARKS)
+
+        remove_marks_button.on_click(on_remove_marks_click)
 
         def on_plus_button_click(_):
             self.logs.append(LogItem("", "", ""))
-            update(True)
+            update(UpdateType.APPEND)
 
         plus_button.on_click(on_plus_button_click)
 
         def on_clear_button_click(_):
             self.logs.clear()
-            update(False)
+            update(UpdateType.RESET)
 
         clear_button.on_click(on_clear_button_click)
 
-        def update(is_appending: bool):
+        suspend_summary_update = False
+        check_boxes = weakref.WeakSet()
+
+        def update(update_type: UpdateType):
             def log_item_box(log_item: LogItem) -> widgets.HBox:
                 check_box = widgets.Checkbox(value=log_item.is_marked, layout=widgets.Layout(width="30px"))
                 name = widgets.Text(value=log_item.name)
 
                 start_text = log_item.start.strftime("%H:%M") if log_item.start is not None else ""
-                start = widgets.Text(value= start_text, description="Start:", layout=widgets.Layout(width="30%"))
+                start = widgets.Text(value=start_text, description="Start:", layout=widgets.Layout(width="30%"))
 
                 end_text = log_item.end.strftime("%H:%M") if log_item.end is not None else ""
                 end = widgets.Text(value=end_text, description="End:", layout=widgets.Layout(width="30%"))
@@ -67,6 +85,8 @@ class LogController:
                 end_now = widgets.Button(description="Now", layout=widgets.Layout(width="50px"))
 
                 duration_label = widgets.Label()
+
+                check_boxes.add(check_box)
 
                 def update_duration():
                     duration_label.value = time_helper.duration_str(log_item.duration())
@@ -113,12 +133,30 @@ class LogController:
                     check_box, name, start, start_now, end, end_now, duration_label
                 ])
 
-            if is_appending:
+            if update_type is UpdateType.APPEND:
                 log_box.children = list(log_box.children) + [log_item_box(self.logs[-1])]
-            else:
+            elif update_type is UpdateType.RESET:
+                old = log_box.children
+
                 log_box.children = [log_item_box(item) for item in self.logs]
 
+                for box in old:
+                    for child in box.children:
+                        child.close()
+                    box.close()
+            elif update_type is UpdateType.REMOVE_MARKS:
+                nonlocal suspend_summary_update
+                suspend_summary_update = True  # Avoid trigger summary update each time for every check box
+                for box in check_boxes:
+                    box.value = False
+                suspend_summary_update = False
+            else:
+                assert False, "Unexpected update type"
+
             def update_summary():
+                if suspend_summary_update:
+                    return
+
                 class MergedItem:
                     def __init__(self, name: str, duration: float):
                         self.name = name
@@ -154,4 +192,4 @@ class LogController:
 
             update_summary()
 
-        update(False)
+        update(UpdateType.RESET)
