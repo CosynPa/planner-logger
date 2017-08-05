@@ -55,7 +55,7 @@ class PlanController:
 
         plan_box = widgets.VBox()
 
-        refresh_button = widgets.Button(description="Refresh")
+        refresh_button = widgets.Button(description="Update time")
 
         container = widgets.VBox()
         container.children = [plan_text,
