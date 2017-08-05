@@ -12,10 +12,10 @@ class LogItem:
     __slots__ = ["name", "start", "end", "is_marked"]
 
     def __init__(self, name: str, start_str: str, end_str: str, is_marked: bool = False):
-        self.name = name
-        self.start = time_helper.parse_time(start_str)[0]
-        self.end = time_helper.parse_time(end_str)[0]
-        self.is_marked = is_marked
+        self.name: str = name
+        self.start: Optional[datetime.date] = time_helper.parse_time(start_str)[0]
+        self.end: Optional[datetime.date] = time_helper.parse_time(end_str)[0]
+        self.is_marked: bool = is_marked
 
     def duration(self) -> float:
         if self.start is not None and self.end is not None:
@@ -212,3 +212,24 @@ class LogController:
             update_summary()
 
         update(UpdateType.RESET)
+
+    def dumps_logs(self, namespace_prefix: str = "logger.") -> str:
+        """
+        Create the string of logs that can be used by Python interpreter later
+        """
+
+        def dumps_log(log: LogItem) -> str:
+            return "{}LogItem({}, {}, {}, {})".format(
+                namespace_prefix,
+                repr(log.name),
+                repr(log.start.strftime("%H:%M") if log.start is not None else "''"),
+                repr(log.end.strftime("%H:%M") if log.end is not None else "''"),
+                repr(log.is_marked)
+            )
+
+        result = "[\n"
+        for item in self.logs:
+            result += dumps_log(item) + ",\n"
+        result += "]"
+
+        return result
