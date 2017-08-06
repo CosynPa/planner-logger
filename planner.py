@@ -8,12 +8,18 @@ from time_helper import TimeType
 
 
 class PlanItem:
-    __slots__ = ["name", "time", "is_finished"]
+    __slots__ = ["name", "time", "is_finished", "is_dummy"]
 
-    def __init__(self, name: str, time: float, is_finished=False):
+    def __init__(self, name: str, time: float, is_finished=False, is_dummy=False):
         self.name = name
         self.time = time
         self.is_finished = is_finished
+        self.is_dummy = is_dummy
+
+    @staticmethod
+    def dummy(name: str) -> "PlanItem":
+        plan = PlanItem(name, 0, False, True)
+        return plan
 
 
 class PlanController:
@@ -99,10 +105,10 @@ class PlanController:
 
     @staticmethod
     def _parse_plan(s: str) -> List[PlanItem]:
-        def parse_item(item: str) -> Optional[PlanItem]:
+        def parse_item(item: str) -> PlanItem:
             strings = item.split(" ")
             if len(strings) < 2:
-                return None
+                return PlanItem.dummy(item)
             else:
                 name_part = strings[:-1]
                 time_part = strings[-1]
@@ -114,12 +120,17 @@ class PlanController:
                     is_finished = False
                     name = " ".join(name_part)
 
-                return PlanItem(name, time_helper.parse_duration(time_part) or 0., is_finished)
+                duration: Optional[float] = time_helper.parse_duration(time_part)
 
-        return [parsed for parsed in (parse_item(item) for item in s.split("\n")) if parsed is not None]
+                if duration is not None:
+                    return PlanItem(name, duration, is_finished)
+                else:
+                    return PlanItem.dummy(item)
+
+        return [parse_item(item) for item in s.split("\n")]
 
     def _update_time(self):
-        planning_finish: float = sum(item.time for item in self.plans if not item.is_finished)
+        planning_finish: float = sum(item.time for item in self.plans if not item.is_finished and not item.is_dummy)
 
         self._finish_time_label.value = "Planning to finish in: {}".format(time_helper.duration_str(planning_finish))
 
@@ -173,17 +184,22 @@ class PlanController:
 
             return widgets.HBox(children=[check, name_title])
 
-        self._plan_box.children = [item_box(item, i) for i, item in enumerate(self.plans)]
+        self._plan_box.children = [item_box(item, i) for i, item in enumerate(self.plans) if not item.is_dummy]
 
     def _update_plan_text(self):
         text = ""
-        for item in self.plans:
+        for i, item in enumerate(self.plans):
             if item.is_finished:
                 finish_prefix = "Done; "
             else:
                 finish_prefix = ""
 
-            text += finish_prefix + item.name + " " + time_helper.duration_str(item.time) + "\n"
+            end_separator = "\n" if i != len(self.plans) - 1 else ""
+
+            if item.is_dummy:
+                text += finish_prefix + item.name + end_separator
+            else:
+                text += finish_prefix + item.name + " " + time_helper.duration_str(item.time) + end_separator
 
         self._plan_text.value = text
 
