@@ -40,8 +40,11 @@ class LogController:
         plus_button = widgets.Button(description="+")
         clear_button = widgets.Button(description="Clear")
         summary_box = widgets.VBox()
+        namespace_text = widgets.Text(description="namespace prefix", value="logger.")
+        array_text = widgets.Textarea(layout=widgets.Layout(width="100%", height="15rem"))
 
-        self.container = widgets.VBox(children=[log_box, plus_button, remove_marks_button, clear_button, summary_box])
+        self.container = widgets.VBox(children=[log_box, plus_button, remove_marks_button, clear_button, summary_box,
+                                                namespace_text, array_text])
 
         class UpdateType(enum.Enum):
             APPEND = enum.auto()
@@ -66,6 +69,11 @@ class LogController:
             update(UpdateType.RESET)
 
         clear_button.on_click(on_clear_button_click)
+
+        def on_namespace_change(change):
+            update_array_text()
+
+        namespace_text.observe(on_namespace_change, "value")
 
         suspend_summary_update = False
         check_boxes = weakref.WeakSet()
@@ -95,20 +103,20 @@ class LogController:
 
                 def on_check(change):
                     log_item.is_marked = change["new"]
-                    update_summary()
+                    update_summary_array_text()
 
                 check_box.observe(on_check, "value")
 
                 def on_name_change(change):
                     log_item.name = change["new"]
-                    update_summary()
+                    update_summary_array_text()
 
                 name.observe(on_name_change, "value")
 
                 def on_start_change(change):
                     log_item.start = time_helper.parse_time(change["new"])[0]
                     update_duration()
-                    update_summary()
+                    update_summary_array_text()
 
                 start.observe(on_start_change, "value")
 
@@ -120,7 +128,7 @@ class LogController:
                 def on_end_change(change):
                     log_item.end = time_helper.parse_time(change["new"])[0]
                     update_duration()
-                    update_summary()
+                    update_summary_array_text()
 
                 end.observe(on_end_change, "value")
 
@@ -153,7 +161,7 @@ class LogController:
             else:
                 assert False, "Unexpected update type"
 
-            def update_summary():
+            def update_summary_array_text():
                 if suspend_summary_update:
                     return
 
@@ -209,7 +217,12 @@ class LogController:
 
                 summary_box.children = item_htmls + [summary_label]
 
-            update_summary()
+                update_array_text()
+
+            update_summary_array_text()
+
+        def update_array_text():
+            array_text.value = self.dumps_logs(namespace_text.value)
 
         update(UpdateType.RESET)
 
