@@ -42,6 +42,7 @@ class PlanController:
 
         # Construct widgets
 
+        title_label = widgets.Label(value="Enter your plans here:", layout=widgets.Layout(width="100%"))
         plan_text = widgets.Textarea(layout=widgets.Layout(height="20rem", width="100%"))
 
         end_time_text = widgets.Text(value=end_time_string, description="End time:")
@@ -64,7 +65,7 @@ class PlanController:
         refresh_button = widgets.Button(description="Update time")
 
         container = widgets.VBox()
-        container.children = [plan_text,
+        container.children = [title_label, plan_text,
                               end_time_text, long_time_box, finish_time_label, time_left,
                               plan_box, refresh_button]
 
