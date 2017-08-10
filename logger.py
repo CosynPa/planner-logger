@@ -31,7 +31,7 @@ class LogController:
         "container",
     ]
 
-    def __init__(self, logs: Optional[List[LogItem]] = None):
+    def __init__(self, logs: Optional[List[LogItem]] = None, show_logs: bool = False):
         _logs: List[LogItem] = logs or []
         self.logs = _logs
 
@@ -40,11 +40,14 @@ class LogController:
         plus_button = widgets.Button(description="+")
         clear_button = widgets.Button(description="Clear")
         summary_box = widgets.VBox()
+
+        show_array_checkbox = widgets.Checkbox(description="Show logs array", value=show_logs)
         namespace_text = widgets.Text(description="namespace prefix", value="logger.")
         array_text = widgets.Textarea(layout=widgets.Layout(width="100%", height="15rem"))
+        array_box = widgets.VBox()
 
         self.container = widgets.VBox(children=[log_box, plus_button, remove_marks_button, clear_button, summary_box,
-                                                namespace_text, array_text])
+                                                show_array_checkbox, array_box])
 
         class UpdateType(enum.Enum):
             APPEND = enum.auto()
@@ -70,10 +73,19 @@ class LogController:
 
         clear_button.on_click(on_clear_button_click)
 
-        def on_namespace_change(change):
+        def on_namespace_change(_):
             update_array_text()
 
         namespace_text.observe(on_namespace_change, "value")
+
+        def update_logs_array(show):
+            if show:
+                array_box.children = [namespace_text, array_text]
+            else:
+                array_box.children = []
+
+        update_logs_array(show_logs)
+        show_array_checkbox.observe(lambda change: update_logs_array(change["new"]), "value")
 
         suspend_summary_update = False
         check_boxes = weakref.WeakSet()
