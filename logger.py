@@ -43,6 +43,9 @@ class LogController:
 
         show_array_checkbox = widgets.Checkbox(description="Show logs array", value=show_logs)
         namespace_text = widgets.Text(description="namespace prefix", value="logger.")
+        array_tip_text = ("You can create a new LogController from the current existing logs "
+                          "by passing the following array:")
+        array_tip = widgets.Label(value=array_tip_text, layout=widgets.Layout(width="100%", max_width="100%"))
         array_text = widgets.Textarea(layout=widgets.Layout(width="100%", height="15rem"))
         array_box = widgets.VBox()
 
@@ -80,7 +83,7 @@ class LogController:
 
         def update_logs_array(show):
             if show:
-                array_box.children = [namespace_text, array_text]
+                array_box.children = [namespace_text, array_tip, array_text]
             else:
                 array_box.children = []
 
