@@ -107,6 +107,9 @@ class PlanController:
     @staticmethod
     def _parse_plan(s: str) -> List[PlanItem]:
         def parse_item(item: str) -> PlanItem:
+            if len(item) >= 1 and item[0] == "#":
+                return PlanItem.dummy(item)
+
             strings = item.split(" ")
             if len(strings) < 2:
                 return PlanItem.dummy(item)
