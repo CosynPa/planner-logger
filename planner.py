@@ -184,7 +184,7 @@ class PlanController:
             check.observe(on_check_changed, "value")
 
             name_text = item.name + " " + time_helper.duration_str(item.time)
-            name_title = widgets.Label(value=name_text, layout=widgets.Layout(width="80%"))
+            name_title = widgets.Label(value=name_text, layout=widgets.Layout(width="80%", max_width="80%"))
 
             return widgets.HBox(children=[check, name_title])
 
