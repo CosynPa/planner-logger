@@ -30,6 +30,7 @@ class PlanController:
         "_end_time_text",
         "_time_per_weekday_text",
         "_time_per_weekend_text",
+        "_today_is_over_checkbox",
         "_long_time_check",
         "_finish_time_label",
         "_time_left",
@@ -54,6 +55,9 @@ class PlanController:
         time_per_weekend_text = widgets.Text(value=time_per_weekend,
                                              description="Time per weekend:",
                                              layout=widgets.Layout(width="250px"))
+        today_is_over_checkbox = widgets.Checkbox(value=False,
+                                              description="Today is over",
+                                              layout=widgets.Layout(width="200px"))
         long_time_box = widgets.HBox()
 
         finish_time_label = widgets.Label(value="Planning to finish in: ", layout=widgets.Layout(width="100%"))
@@ -77,6 +81,7 @@ class PlanController:
         self._long_time_check = long_time_check
         self._time_per_weekday_text = time_per_weekday_text
         self._time_per_weekend_text = time_per_weekend_text
+        self._today_is_over_checkbox = today_is_over_checkbox
         self._finish_time_label = finish_time_label
         self._time_left = time_left
         self._plan_box = plan_box
@@ -86,12 +91,14 @@ class PlanController:
         refresh_button.on_click(lambda button: self._update_time())
         time_per_weekday_text.observe(lambda change: self._update_time(), "value")
         time_per_weekend_text.observe(lambda change: self._update_time(), "value")
+        today_is_over_checkbox.observe(lambda change: self._update_time(), "value")
 
         def update_long_time(new_is_long_time):
             if new_is_long_time:
                 long_time_box.children = [long_time_check,
                                           time_per_weekday_text,
-                                          time_per_weekend_text
+                                          time_per_weekend_text,
+                                          today_is_over_checkbox,
                                           ]
             else:
                 long_time_box.children = [long_time_check]
@@ -165,7 +172,10 @@ class PlanController:
                     per_weekend = time_helper.parse_duration(self._time_per_weekend_text.value)
                     per_weekend = per_weekend if per_weekend is not None else 86400.
 
-                    days = [now + datetime.timedelta(n) for n in range(finish.toordinal() - now.toordinal() + 1)]
+                    range_start = 0 if not self._today_is_over_checkbox.value else 1
+
+                    days = [now + datetime.timedelta(n) for n in
+                            range(range_start, finish.toordinal() - now.toordinal() + 1)]
 
                     duration = sum(per_weekday if day.isoweekday() in range(1, 6) else per_weekend for day in days)
 
