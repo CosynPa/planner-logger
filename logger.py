@@ -13,8 +13,8 @@ class LogItem:
 
     def __init__(self, name: str, start_str: str, end_str: str, is_marked: bool = False):
         self.name: str = name
-        self.start: Optional[datetime.date] = time_helper.parse_time(start_str)[0]
-        self.end: Optional[datetime.date] = time_helper.parse_time(end_str)[0]
+        self.start: Optional[datetime.datetime] = time_helper.parse_time(start_str)[0]
+        self.end: Optional[datetime.datetime] = time_helper.parse_time(end_str)[0]
         self.is_marked: bool = is_marked
 
     def duration(self) -> float:
@@ -94,7 +94,7 @@ class LogController:
         check_boxes = weakref.WeakSet()
 
         def update(update_type: UpdateType):
-            def log_item_box(log_item: LogItem) -> widgets.HBox:
+            def log_item_box(log_item: LogItem, index: int) -> widgets.HBox:
                 check_box = widgets.Checkbox(value=log_item.is_marked, layout=widgets.Layout(width="30px"))
                 name = widgets.Text(value=log_item.name)
 
@@ -105,6 +105,7 @@ class LogController:
                 end = widgets.Text(value=end_text, description="End:", layout=widgets.Layout(width="30%"))
 
                 start_now = widgets.Button(description="Now", layout=widgets.Layout(width="50px"))
+                last_button = widgets.Button(description="Last", layout=widgets.Layout(width="50px"))
                 end_now = widgets.Button(description="Now", layout=widgets.Layout(width="50px"))
 
                 duration_label = widgets.Label()
@@ -140,6 +141,12 @@ class LogController:
 
                 start_now.on_click(on_start_now_click)
 
+                def on_last_click(_):
+                    if index >= 1:
+                        start.value = self.logs[index - 1].end.strftime("%H:%M")
+
+                last_button.on_click(on_last_click)
+
                 def on_end_change(change):
                     log_item.end = time_helper.parse_time(change["new"])[0]
                     update_duration()
@@ -153,15 +160,15 @@ class LogController:
                 end_now.on_click(on_end_now_click)
 
                 return widgets.HBox(children=[
-                    check_box, name, start, start_now, end, end_now, duration_label
+                    check_box, name, start, start_now, last_button, end, end_now, duration_label
                 ])
 
             if update_type is UpdateType.APPEND:
-                log_box.children = list(log_box.children) + [log_item_box(self.logs[-1])]
+                log_box.children = list(log_box.children) + [log_item_box(self.logs[-1], len(self.logs) - 1)]
             elif update_type is UpdateType.RESET:
                 old = log_box.children
 
-                log_box.children = [log_item_box(item) for item in self.logs]
+                log_box.children = [log_item_box(item, i) for i, item in enumerate(self.logs)]
 
                 for box in old:
                     for child in box.children:
