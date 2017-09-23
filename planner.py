@@ -114,6 +114,8 @@ class PlanController:
     @staticmethod
     def _parse_plan(s: str) -> List[PlanItem]:
         def parse_item(item: str) -> PlanItem:
+            item = item.rstrip()
+
             if len(item) >= 1 and item[0] == "#":
                 return PlanItem.dummy(item)
 

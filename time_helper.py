@@ -73,6 +73,8 @@ def duration_str(seconds: float) -> str:
 
 
 def parse_time(time_string: str) -> Tuple[Optional[datetime.datetime], TimeType]:
+    time_string = time_string.strip()
+
     formats = [
         ("%H:%M", TimeType.TIME),
 
