@@ -143,7 +143,9 @@ class LogController:
 
                 def on_last_click(_):
                     if index >= 1:
-                        start.value = self.logs[index - 1].end.strftime("%H:%M")
+                        last_end = self.logs[index - 1].end
+                        if last_end is not None:
+                            start.value = last_end.strftime("%H:%M")
 
                 last_button.on_click(on_last_click)
 
