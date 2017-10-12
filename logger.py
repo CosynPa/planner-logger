@@ -231,12 +231,16 @@ class LogController:
 
                 item_htmls = [item_html(item) for item in merged_items]
 
-                total = time_helper.duration_str(sum(item.duration() for item in self.logs))
-                total_marked = time_helper.duration_str(sum(item.duration() for item in self.logs if item.is_marked))
+                total = sum(item.duration() for item in self.logs)
+                total_marked = sum(item.duration() for item in self.logs if item.is_marked)
+                total_str = time_helper.duration_str(total)
+                total_marked_str = time_helper.duration_str(total_marked)
+                total_not_marked_str = time_helper.duration_str(total - total_marked)
 
                 summary_label = widgets.Label(
-                    value="Total: {}, total marked: {}".format(total, total_marked),
-                    layout=widgets.Layout(width="100%")
+                    value="Total: {}. Total marked: {}. Not marked {}.".format(
+                        total_str, total_marked_str, total_not_marked_str),
+                    layout=widgets.Layout(width="100%", max_width="100%")
                 )
 
                 summary_box.children = item_htmls + [summary_label]
