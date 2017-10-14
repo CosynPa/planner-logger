@@ -8,17 +8,25 @@ from time_helper import TimeType
 
 
 class PlanItem:
-    __slots__ = ["name", "time", "is_finished", "is_dummy"]
+    __slots__ = ["name", "durations", "is_finished", "is_dummy"]
 
-    def __init__(self, name: str, time: float, is_finished=False, is_dummy=False):
+    def __init__(self, name: str, durations: List[Optional[float]], is_finished=False, is_dummy=False):
         self.name = name
-        self.time = time
+        self.durations = durations
         self.is_finished = is_finished
         self.is_dummy = is_dummy
 
+    def text(self):
+        if self.is_dummy:
+            return self.name
+        else:
+            duration_strings = [time_helper.duration_str(duration) if duration is not None else " "
+                                for duration in self.durations]
+            return self.name + " " + " | ".join(duration_strings)
+
     @staticmethod
     def dummy(name: str) -> "PlanItem":
-        plan = PlanItem(name, 0, False, True)
+        plan = PlanItem(name, [], False, True)
         return plan
 
 
@@ -34,6 +42,7 @@ class PlanController:
         "_long_time_check",
         "_finish_time_label",
         "_time_left",
+        "_total_time",
         "_plan_box",
     ]
 
@@ -56,13 +65,15 @@ class PlanController:
                                              description="Time per weekend:",
                                              layout=widgets.Layout(width="250px"))
         today_is_over_checkbox = widgets.Checkbox(value=False,
-                                              description="Today is over",
-                                              layout=widgets.Layout(width="200px"))
+                                                  description="Today is over",
+                                                  layout=widgets.Layout(width="200px"))
         long_time_box = widgets.HBox()
 
         finish_time_label = widgets.Label(value="Planning to finish in: ", layout=widgets.Layout(width="100%"))
 
         time_left = widgets.Label(value="Time left: ", layout=widgets.Layout(width="100%"))
+
+        total_time = widgets.Label(value="Total: ", layout=widgets.Layout(width="100%"))
 
         plan_box = widgets.VBox()
 
@@ -70,7 +81,7 @@ class PlanController:
 
         container = widgets.VBox()
         container.children = [title_label, plan_text,
-                              end_time_text, long_time_box, finish_time_label, time_left,
+                              end_time_text, long_time_box, finish_time_label, time_left, total_time,
                               plan_box, refresh_button]
 
         #
@@ -84,6 +95,7 @@ class PlanController:
         self._today_is_over_checkbox = today_is_over_checkbox
         self._finish_time_label = finish_time_label
         self._time_left = time_left
+        self._total_time = total_time
         self._plan_box = plan_box
 
         plan_text.observe(lambda change: self._plan_text_changed(change), "value")
@@ -114,17 +126,31 @@ class PlanController:
     @staticmethod
     def _parse_plan(s: str) -> List[PlanItem]:
         def parse_item(item: str) -> PlanItem:
-            item = item.rstrip()
+            """Parse plan item
+
+            Examples:
+                 Normal: do something 1h30m
+                 Comment: # some text
+                 Text: some text
+                 Multiple time: do something 1h30m | 1h40m
+            """
 
             if len(item) >= 1 and item[0] == "#":
                 return PlanItem.dummy(item)
 
-            strings = item.split(" ")
+            bar_components = item.split("|")
+
+            strings = bar_components[0].strip().split(" ")
             if len(strings) < 2:
                 return PlanItem.dummy(item)
             else:
-                name_part = strings[:-1]
-                time_part = strings[-1]
+                possible_duration_string = strings[-1]
+                possible_duration: Optional[float] = time_helper.parse_duration(possible_duration_string)
+
+                if possible_duration is not None:
+                    name_part = strings[:-1]
+                else:
+                    name_part = strings
 
                 if name_part[0].lower() == "done;":
                     is_finished = True
@@ -133,17 +159,21 @@ class PlanController:
                     is_finished = False
                     name = " ".join(name_part)
 
-                duration: Optional[float] = time_helper.parse_duration(time_part)
+                durations: List[Optional[float]] = [possible_duration] if possible_duration is not None else []
+                for a_time_string in bar_components[1:]:
+                    duration: Optional[float] = time_helper.parse_duration(a_time_string.strip())
+                    durations.append(duration)
 
-                if duration is not None:
-                    return PlanItem(name, duration, is_finished)
+                if len(durations) > 0 and durations[0] is not None:
+                    return PlanItem(name, durations, is_finished)
                 else:
                     return PlanItem.dummy(item)
 
         return [parse_item(item) for item in s.split("\n")]
 
     def _update_time(self):
-        planning_finish: float = sum(item.time for item in self.plans if not item.is_finished and not item.is_dummy)
+        planning_finish: float = sum(item.durations[0] for item in self.plans
+                                     if not item.is_finished and not item.is_dummy)
 
         self._finish_time_label.value = "Planning to finish in: {}".format(time_helper.duration_str(planning_finish))
 
@@ -185,6 +215,15 @@ class PlanController:
                     self._time_left.value = "Time left: {}, -Plan: {}".format(time_helper.duration_str(duration),
                                                                               duration_minus_plan_str)
 
+        number_column = max(len(item.durations) for item in self.plans)
+        total_time_texts: List[str] = []
+        for i in range(0, number_column):
+            total = sum(item.durations[i] for item in self.plans
+                        if not item.is_dummy and i < len(item.durations) and item.durations[i] is not None)
+            total_time_texts.append(time_helper.duration_str(total))
+
+        self._total_time.value = "Total time: " + ", ".join(total_time_texts)
+
     def _update_plan_box(self):
         def item_box(item: PlanItem, index: int) -> widgets.HBox:
             def on_check_changed(change):
@@ -195,7 +234,7 @@ class PlanController:
             check = widgets.Checkbox(value=item.is_finished, layout=widgets.Layout(width="30px"))
             check.observe(on_check_changed, "value")
 
-            name_text = item.name + " " + time_helper.duration_str(item.time)
+            name_text = item.text()
             name_title = widgets.Label(value=name_text, layout=widgets.Layout(width="80%", max_width="80%"))
 
             return widgets.HBox(children=[check, name_title])
@@ -212,10 +251,7 @@ class PlanController:
 
             end_separator = "\n" if i != len(self.plans) - 1 else ""
 
-            if item.is_dummy:
-                text += finish_prefix + item.name + end_separator
-            else:
-                text += finish_prefix + item.name + " " + time_helper.duration_str(item.time) + end_separator
+            text += finish_prefix + item.text() + end_separator
 
         self._plan_text.value = text
 
