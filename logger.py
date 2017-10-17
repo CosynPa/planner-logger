@@ -41,7 +41,7 @@ class LogController:
         clear_button = widgets.Button(description="Clear")
         summary_box = widgets.VBox()
 
-        show_array_checkbox = widgets.Checkbox(description="Show logs array", value=show_logs)
+        show_array_checkbox = widgets.Checkbox(description="Show logs array", value=show_logs, indent=False)
         namespace_text = widgets.Text(description="namespace prefix", value="logger.")
         array_tip_text = ("You can create a new LogController from the current existing logs "
                           "by passing the following array:")
@@ -95,7 +95,9 @@ class LogController:
 
         def update(update_type: UpdateType):
             def log_item_box(log_item: LogItem, index: int) -> widgets.HBox:
-                check_box = widgets.Checkbox(value=log_item.is_marked, layout=widgets.Layout(width="30px"))
+                check_box = widgets.Checkbox(value=log_item.is_marked,
+                                             layout=widgets.Layout(width="30px"),
+                                             indent=False)
                 name = widgets.Text(value=log_item.name)
 
                 start_text = log_item.start.strftime("%H:%M") if log_item.start is not None else ""
@@ -104,11 +106,11 @@ class LogController:
                 end_text = log_item.end.strftime("%H:%M") if log_item.end is not None else ""
                 end = widgets.Text(value=end_text, description="End:", layout=widgets.Layout(width="30%"))
 
-                start_now = widgets.Button(description="Now", layout=widgets.Layout(width="50px"))
-                last_button = widgets.Button(description="Last", layout=widgets.Layout(width="50px"))
-                end_now = widgets.Button(description="Now", layout=widgets.Layout(width="50px"))
+                start_now = widgets.Button(description="Now", layout=widgets.Layout(width="70px"))
+                last_button = widgets.Button(description="Last", layout=widgets.Layout(width="70px"))
+                end_now = widgets.Button(description="Now", layout=widgets.Layout(width="70px"))
 
-                duration_label = widgets.Label()
+                duration_label = widgets.Label(layout=widgets.Layout(width="80px"))
 
                 check_boxes.add(check_box)
 

@@ -57,16 +57,21 @@ class PlanController:
 
         end_time_text = widgets.Text(value=end_time_string, description="End time:")
 
-        long_time_check = widgets.Checkbox(value=is_long_time, description="Long time")
+        long_time_check = widgets.Checkbox(value=is_long_time, description="Long time",
+                                           layout={"width": "150px"},
+                                           indent=False)
         time_per_weekday_text = widgets.Text(value=time_per_weekday,
-                                             description="Time per weekday:",
-                                             layout=widgets.Layout(width="250px"))
+                                             description="Time per weekday:")
+        time_per_weekday_text.style.description_width = "120px"
+
         time_per_weekend_text = widgets.Text(value=time_per_weekend,
-                                             description="Time per weekend:",
-                                             layout=widgets.Layout(width="250px"))
+                                             description="Time per weekend:")
+        time_per_weekend_text.style.description_width = "120px"
+
         today_is_over_checkbox = widgets.Checkbox(value=False,
                                                   description="Today is over",
-                                                  layout=widgets.Layout(width="200px"))
+                                                  layout={"width":"150px"},
+                                                  indent=False)
         long_time_box = widgets.HBox()
 
         finish_time_label = widgets.Label(value="Planning to finish in: ", layout=widgets.Layout(width="100%"))
@@ -231,7 +236,7 @@ class PlanController:
                 self._update_time()
                 self._update_plan_text()
 
-            check = widgets.Checkbox(value=item.is_finished, layout=widgets.Layout(width="30px"))
+            check = widgets.Checkbox(value=item.is_finished, layout=widgets.Layout(width="30px"), indent=False)
             check.observe(on_check_changed, "value")
 
             name_text = item.text()
