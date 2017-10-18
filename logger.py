@@ -2,7 +2,7 @@ import datetime
 from typing import List, Optional
 import enum
 import weakref
-
+import json
 import ipywidgets as widgets
 
 import time_helper
@@ -29,10 +29,29 @@ class LogController:
     __slots__ = [
         "logs",
         "container",
+        "file",
     ]
 
-    def __init__(self, logs: Optional[List[LogItem]] = None, show_logs: bool = False):
-        _logs: List[LogItem] = logs or []
+    def __init__(self, file: Optional[str] = None):
+        self.file = file
+
+        _logs: List[LogItem] = []
+        if file is not None:
+            try:
+                with open(file) as data_file:
+                    data = json.load(data_file)
+                    if isinstance(data, list):
+                        for dic in data:
+                            if isinstance(dic, dict):
+                                name = dic["name"]
+                                start_str = dic["start_str"]
+                                end_str = dic["end_str"]
+                                is_marked = dic["is_marked"]
+                                log = LogItem(name, start_str, end_str, is_marked)
+                                _logs.append(log)
+            except (OSError, json.JSONDecodeError, KeyError):
+                pass
+
         self.logs = _logs
 
         log_box = widgets.VBox()
@@ -41,16 +60,7 @@ class LogController:
         clear_button = widgets.Button(description="Clear")
         summary_box = widgets.VBox()
 
-        show_array_checkbox = widgets.Checkbox(description="Show logs array", value=show_logs, indent=False)
-        namespace_text = widgets.Text(description="namespace prefix", value="logger.")
-        array_tip_text = ("You can create a new LogController from the current existing logs "
-                          "by passing the following array:")
-        array_tip = widgets.Label(value=array_tip_text, layout=widgets.Layout(width="100%", max_width="100%"))
-        array_text = widgets.Textarea(layout=widgets.Layout(width="100%", height="15rem"))
-        array_box = widgets.VBox()
-
-        self.container = widgets.VBox(children=[log_box, plus_button, remove_marks_button, clear_button, summary_box,
-                                                show_array_checkbox, array_box])
+        self.container = widgets.VBox(children=[log_box, plus_button, remove_marks_button, clear_button, summary_box])
 
         class UpdateType(enum.Enum):
             APPEND = enum.auto()
@@ -75,20 +85,6 @@ class LogController:
             update(UpdateType.RESET)
 
         clear_button.on_click(on_clear_button_click)
-
-        def on_namespace_change(_):
-            update_array_text()
-
-        namespace_text.observe(on_namespace_change, "value")
-
-        def update_logs_array(show):
-            if show:
-                array_box.children = [namespace_text, array_tip, array_text]
-            else:
-                array_box.children = []
-
-        update_logs_array(show_logs)
-        show_array_checkbox.observe(lambda change: update_logs_array(change["new"]), "value")
 
         suspend_summary_update = False
         check_boxes = weakref.WeakSet()
@@ -121,20 +117,20 @@ class LogController:
 
                 def on_check(change):
                     log_item.is_marked = change["new"]
-                    update_summary_array_text()
+                    update_summary_and_save()
 
                 check_box.observe(on_check, "value")
 
                 def on_name_change(change):
                     log_item.name = change["new"]
-                    update_summary_array_text()
+                    update_summary_and_save()
 
                 name.observe(on_name_change, "value")
 
                 def on_start_change(change):
                     log_item.start = time_helper.parse_time(change["new"])[0]
                     update_duration()
-                    update_summary_array_text()
+                    update_summary_and_save()
 
                 start.observe(on_start_change, "value")
 
@@ -154,7 +150,7 @@ class LogController:
                 def on_end_change(change):
                     log_item.end = time_helper.parse_time(change["new"])[0]
                     update_duration()
-                    update_summary_array_text()
+                    update_summary_and_save()
 
                 end.observe(on_end_change, "value")
 
@@ -187,7 +183,7 @@ class LogController:
             else:
                 assert False, "Unexpected update type"
 
-            def update_summary_array_text():
+            def update_summary_and_save():
                 if suspend_summary_update:
                     return
 
@@ -247,32 +243,29 @@ class LogController:
 
                 summary_box.children = item_htmls + [summary_label]
 
-                update_array_text()
+                self.save()
 
-            update_summary_array_text()
-
-        def update_array_text():
-            array_text.value = self.dumps_logs(namespace_text.value)
+            update_summary_and_save()
 
         update(UpdateType.RESET)
 
-    def dumps_logs(self, namespace_prefix: str = "logger.") -> str:
-        """
-        Create the string of logs that can be used by Python interpreter later
-        """
+    def save(self):
+        if self.file is None:
+            return
 
-        def dumps_log(log: LogItem) -> str:
-            return "{}LogItem({}, {}, {}, {})".format(
-                namespace_prefix,
-                repr(log.name),
-                repr(log.start.strftime("%H:%M") if log.start is not None else "''"),
-                repr(log.end.strftime("%H:%M") if log.end is not None else "''"),
-                repr(log.is_marked)
-            )
+        try:
+            with open(self.file, mode="w") as f:
+                array = []
+                for log in self.logs:
+                    dic = {
+                        "name": log.name,
+                        "start_str": log.start.strftime("%H:%M") if log.start is not None else "''",
+                        "end_str": log.end.strftime("%H:%M") if log.end is not None else "''",
+                        "is_marked": log.is_marked
+                    }
 
-        result = "[\n"
-        for item in self.logs:
-            result += dumps_log(item) + ",\n"
-        result += "]"
+                    array.append(dic)
 
-        return result
+                json.dump(array, f)
+        except OSError:
+            print("File open fail")
