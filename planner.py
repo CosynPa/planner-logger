@@ -1,6 +1,6 @@
 from typing import List, Optional
 import datetime
-
+import json
 import ipywidgets as widgets
 
 import time_helper
@@ -32,6 +32,7 @@ class PlanItem:
 
 class PlanController:
     __slots__ = [
+        "file",
         "plans",
         "container",
         "_plan_text",
@@ -46,8 +47,29 @@ class PlanController:
         "_plan_box",
     ]
 
-    def __init__(self, plan_string: str, end_time_string: str = "",
-                 is_long_time: bool = False, time_per_weekday: str = "", time_per_weekend: str = ""):
+    def __init__(self, file: Optional[str]):
+        self.file = file
+
+        plan_string: str = ""
+        end_time_string: str = ""
+        is_long_time: bool = False
+        time_per_weekday: str = ""
+        time_per_weekend: str = ""
+        is_today_over: bool = False
+        if file is not None:
+            try:
+                with open(file) as data_file:
+                    dic = json.load(data_file)
+                    if isinstance(dic, dict):
+                        plan_string = dic["plan_string"]
+                        end_time_string = dic["end_time_string"]
+                        is_long_time = dic["is_long_time"]
+                        time_per_weekday = dic["time_per_weekday"]
+                        time_per_weekend = dic["time_per_weekend"]
+                        is_today_over = dic["is_today_over"]
+            except (OSError, json.JSONDecodeError, KeyError):
+                pass
+
         self.plans = self._parse_plan(plan_string)
 
         # Construct widgets
@@ -68,7 +90,7 @@ class PlanController:
                                              description="Time per weekend:")
         time_per_weekend_text.style.description_width = "120px"
 
-        today_is_over_checkbox = widgets.Checkbox(value=False,
+        today_is_over_checkbox = widgets.Checkbox(value=is_today_over,
                                                   description="Today is over",
                                                   layout={"width":"150px"},
                                                   indent=False)
@@ -228,6 +250,26 @@ class PlanController:
             total_time_texts.append(time_helper.duration_str(total))
 
         self._total_time.value = "Total time: " + ", ".join(total_time_texts)
+
+        self.save()
+
+    def save(self):
+        if self.file is None:
+            return
+        
+        try:
+            with open(self.file, mode="w") as f:
+                dic = {
+                    "plan_string": self._plan_text.value,
+                    "end_time_string": self._end_time_text.value,
+                    "is_long_time": self._long_time_check.value,
+                    "time_per_weekday": self._time_per_weekday_text.value,
+                    "time_per_weekend": self._time_per_weekend_text.value,
+                    "is_today_over": self._today_is_over_checkbox.value,
+                }
+                json.dump(dic, f)
+        except OSError:
+            print("File open fail")
 
     def _update_plan_box(self):
         def item_box(item: PlanItem, index: int) -> widgets.HBox:
