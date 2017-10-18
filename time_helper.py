@@ -14,7 +14,15 @@ def parse_duration(time_string: str) -> Optional[float]:
     """
     Parse duration such as "2h30m". If parse failed, returns None. "0" is parsed as 0.
     """
-    days = time_string.split("d")
+
+    if len(time_string) >= 1 and time_string[0] == "-":
+        sign = -1.
+        positive_part = time_string[1:]
+    else:
+        sign = 1.
+        positive_part = time_string
+
+    days = positive_part.split("d")
     day_number: Optional[float]
     if len(days) == 2:
         try:
@@ -45,12 +53,12 @@ def parse_duration(time_string: str) -> Optional[float]:
         minute_number = None
 
     if day_number is None and hour_number is None and minute_number is None:
-        if time_string == "0":
+        if positive_part == "0":
             return 0.
         else:
             return None
     else:
-        return (day_number or 0.) * 86400. + (hour_number or 0.) * 3600. + (minute_number or 0.) * 60.
+        return sign * ((day_number or 0.) * 86400. + (hour_number or 0.) * 3600. + (minute_number or 0.) * 60.)
 
 
 def duration_str(seconds: float) -> str:
