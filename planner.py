@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import datetime
 import json
 import ipywidgets as widgets
@@ -167,39 +167,49 @@ class PlanController:
 
             bar_components = item.split("|")
 
-            strings = bar_components[0].strip().split(" ")
-            if len(strings) < 2:
+            first_part = bar_components[0]
+
+            def parse_first_part(first_part: str) -> Tuple[str, bool, Optional[float]]:
+                strings = first_part.strip().split(" ")
+
+                if len(strings) == 0:
+                    return "", False, None
+                elif len(strings) == 1:
+                    return strings[0], False, None
+                else:
+                    possible_duration_string = strings[-1]
+                    possible_duration: Optional[float] = time_helper.parse_duration(possible_duration_string)
+
+                    if possible_duration is not None:
+                        name_part = strings[:-1]
+                    else:
+                        name_part = strings
+
+                    if name_part[0].lower() == "done;":
+                        is_finished = True
+                        name = " ".join(name_part[1:])
+                    else:
+                        is_finished = False
+                        name = " ".join(name_part)
+
+                    return name, is_finished, possible_duration
+
+            name, is_finished, first_duration = parse_first_part(first_part)
+
+            durations: List[Optional[float]] = [first_duration]
+            for a_time_string in bar_components[1:]:
+                duration: Optional[float] = time_helper.parse_duration(a_time_string.strip())
+                durations.append(duration)
+
+            if all(duration is None for duration in durations):
                 return PlanItem.dummy(item)
             else:
-                possible_duration_string = strings[-1]
-                possible_duration: Optional[float] = time_helper.parse_duration(possible_duration_string)
-
-                if possible_duration is not None:
-                    name_part = strings[:-1]
-                else:
-                    name_part = strings
-
-                if name_part[0].lower() == "done;":
-                    is_finished = True
-                    name = " ".join(name_part[1:])
-                else:
-                    is_finished = False
-                    name = " ".join(name_part)
-
-                durations: List[Optional[float]] = [possible_duration] if possible_duration is not None else []
-                for a_time_string in bar_components[1:]:
-                    duration: Optional[float] = time_helper.parse_duration(a_time_string.strip())
-                    durations.append(duration)
-
-                if len(durations) > 0 and durations[0] is not None:
-                    return PlanItem(name, durations, is_finished)
-                else:
-                    return PlanItem.dummy(item)
+                return PlanItem(name, durations, is_finished)
 
         return [parse_item(item) for item in s.split("\n")]
 
     def _update_time(self):
-        planning_finish: float = sum(item.durations[0] for item in self.plans
+        planning_finish: float = sum(item.durations[0] or 0 for item in self.plans
                                      if not item.is_finished and not item.is_dummy)
 
         self._finish_time_label.value = "Planning to finish in: {}".format(time_helper.duration_str(planning_finish))
@@ -256,7 +266,7 @@ class PlanController:
     def save(self):
         if self.file is None:
             return
-        
+
         try:
             with open(self.file, mode="w") as f:
                 dic = {
