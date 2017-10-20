@@ -225,6 +225,10 @@ class PlanController:
                 now = datetime.datetime.now()
                 duration: float = (finish_time - now).total_seconds()
 
+                if duration < -8 * 3600:
+                    # The time is in tomorrow
+                    duration += 86400
+
                 duration_minus_plan_str = time_helper.duration_str(duration - planning_finish)
                 self._time_left.value = "Time left: {}, -Plan: {}".format(time_helper.duration_str(duration),
                                                                           duration_minus_plan_str)
