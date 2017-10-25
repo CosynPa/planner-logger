@@ -5,6 +5,7 @@ import ipywidgets as widgets
 
 import time_helper
 from time_helper import TimeType
+import debounce
 
 
 class PlanItem:
@@ -125,7 +126,7 @@ class PlanController:
         self._total_time = total_time
         self._plan_box = plan_box
 
-        plan_text.observe(lambda change: self._plan_text_changed(change), "value")
+        plan_text.observe(debounce.debounced(0.1)(lambda change: self._plan_text_changed(change)), "value")
         end_time_text.observe(lambda change: self._update_time(), "value")
         refresh_button.on_click(lambda button: self._update_time())
         time_per_weekday_text.observe(lambda change: self._update_time(), "value")

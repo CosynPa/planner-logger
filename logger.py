@@ -6,6 +6,7 @@ import json
 import ipywidgets as widgets
 
 import time_helper
+import debounce
 
 
 class LogItem:
@@ -125,7 +126,7 @@ class LogController:
                     log_item.name = change["new"]
                     update_summary_and_save()
 
-                name.observe(on_name_change, "value")
+                name.observe(debounce.debounced(0.1)(on_name_change), "value")
 
                 def on_start_change(change):
                     log_item.start = time_helper.parse_time(change["new"])[0]
