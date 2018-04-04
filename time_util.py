@@ -19,3 +19,12 @@ class Time:
     
     def __neg__(self):
         return Time(second=-self.duration)
+    
+    def __mul__(self, other):
+        return Time(second=self.duration * other)
+    
+    def __rmul__(self, other):
+        return Time(second=self.duration * other)
+    
+    def __truediv__(self, other):
+        return Time(second=self.duration / other)
