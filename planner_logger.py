@@ -320,7 +320,7 @@ class PlannerLoggerController:
 
         default_formula_button = widgets.Button(description="Default formula")
 
-        default_formula = "marked_total - plan_time + previous_bonus * 0.5 + marked_plus * 0.5"
+        default_formula = "not_marked_total - plan_time + previous_bonus * 0.5 + not_marked_plus * 0.5"
 
         style = {"description_width": "100px"}
         self.bonus_formula = widgets.Text(description="Bonus formula", layout=widgets.Layout(width="90%"), style=style)
