@@ -253,14 +253,11 @@ class PlannerLoggerItemBox(widgets.HBox):
         self.last_duration.disabled = self.log_item.is_continued
 
         first_duration = time_helper.parse_duration(self.log_item.plan.first_duration)
-        first_duration = first_duration if first_duration is not None else 0.0
-
         last_duration = time_helper.parse_duration(self.log_item.plan.last_duration)
-        last_duration = last_duration if last_duration is not None else 0.0
 
-        time_diff_last = last_duration - self.log_item.tail().duration()
-        time_diff_first = first_duration - self.log_item.tail().duration()
-        if time_diff_first >= 0:
+        time_diff_last = last_duration - self.log_item.tail().duration() if last_duration is not None else 0.0
+        time_diff_first = first_duration - self.log_item.tail().duration() if first_duration is not None else 0.0
+        if time_diff_first >= 0 and first_duration is not None:
             color = "green"
         elif time_diff_last >= 0:
             color = "black"
@@ -449,9 +446,8 @@ class PlannerLoggerController:
         not_marked_total = 0.0
         for log in tail_logs:
             last_duration = time_helper.parse_duration(log.plan.last_duration)
-            last_duration = last_duration if last_duration is not None else 0.0
 
-            time_diff_last = last_duration - log.duration()
+            time_diff_last = last_duration - log.duration() if last_duration is not None else 0.0
 
             if log.plan.is_marked:
                 if time_diff_last >= 0:
