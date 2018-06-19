@@ -91,6 +91,8 @@ class PlannerLoggerItemBox(widgets.HBox):
         last_duration = widgets.Text(value=log_item.plan.last_duration,
             description="Last duration:", layout=widgets.Layout(width="150px"), style=style)
 
+        spacing = widgets.HBox(layout=widgets.Layout(width="40px"))
+
         start_text = log_item.start.strftime("%H:%M") if log_item.start is not None else ""
         start = widgets.Text(value=start_text, description="Start:", layout=widgets.Layout(width="100px"), style=style)
 
@@ -215,6 +217,7 @@ class PlannerLoggerItemBox(widgets.HBox):
         super().__init__(children=[
             check_box, name, continue_check,
             duration_label, time_diff_label, first_duration, last_duration,
+            spacing,
             start, start_now, last_button,
             end, end_now,
         ])
