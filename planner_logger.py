@@ -23,7 +23,7 @@ class TwoStagePlanItem:
 
 
 class ContinuingLogItem(LogItem):
-    __slots__ = ["index", "is_continued", "manually_set_uncontinued", "previous_log", "next_log", "plan"]
+    __slots__ = ["index", "is_continued", "manually_set_uncontinued", "previous_log", "next_log", "plan", "backup_plan"]
 
     def __init__(self, name: str, start_str: str, end_str: str,
                  index: int, plan: Optional[TwoStagePlanItem] = None,
@@ -37,6 +37,7 @@ class ContinuingLogItem(LogItem):
         self.previous_log: Optional[ContinuingLogItem] = None
         self.next_log: Optional[ContinuingLogItem] = None
         self.plan: TwoStagePlanItem = plan if plan is not None else TwoStagePlanItem()
+        self.backup_plan: TwoStagePlanItem = self.plan
 
     def duration(self) -> float:
         return super().duration() + (0.0 if self.previous_log is None else self.previous_log.duration())
@@ -418,9 +419,10 @@ class PlannerLoggerController:
             same_name_logs = [a_log for a_log in self.logs[0:index] if a_log.name == log.name]
             if same_name_logs and not log.manually_set_uncontinued:
                 log.insert_to_linked_list(after_item=same_name_logs[-1])
+                log.backup_plan = copy.copy(log.plan)
                 log.plan = same_name_logs[-1].plan
             else:
-                log.plan = copy.copy(log.plan)
+                log.plan = log.backup_plan
             
         # should update after linked list structure is completely constructed
         for box in self.log_box.children:
