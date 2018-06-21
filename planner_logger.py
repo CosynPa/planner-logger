@@ -422,7 +422,11 @@ class PlannerLoggerController:
                 log.backup_plan = copy.copy(log.plan)
                 log.plan = same_name_logs[-1].plan
             else:
+                # When a log is changed from continued to uncontinued, it usually
+                # has the same type of mark state as the previous log with the same name
+                is_marked = log.plan.is_marked
                 log.plan = log.backup_plan
+                log.plan.is_marked = is_marked
             
         # should update after linked list structure is completely constructed
         for box in self.log_box.children:
