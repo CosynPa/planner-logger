@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import enum
 import json
 import weakref
@@ -41,6 +41,25 @@ class ContinuingLogItem(LogItem):
 
     def duration(self) -> float:
         return super().duration() + (0.0 if self.previous_log is None else self.previous_log.duration())
+
+    def time_diffs(self) -> Tuple[Optional[float], Optional[float]]:
+
+        first_duration = time_helper.parse_duration(self.plan.first_duration)
+        last_duration = time_helper.parse_duration(self.plan.last_duration)
+
+        tail = self.tail()
+
+        if tail.start is not None and tail.end is not None and last_duration is not None:
+            time_diff_last = last_duration - tail.duration()
+        else:
+            time_diff_last = None
+
+        if tail.start is not None and tail.end is not None and first_duration is not None:
+            time_diff_first = first_duration - tail.duration()
+        else:
+            time_diff_first = None
+
+        return time_diff_first, time_diff_last
 
     def is_head(self) -> bool:
         return self.next_log is not None and self.previous_log is None
@@ -253,18 +272,16 @@ class PlannerLoggerItemBox(widgets.HBox):
         self.first_duration.disabled = self.log_item.is_continued
         self.last_duration.disabled = self.log_item.is_continued
 
-        first_duration = time_helper.parse_duration(self.log_item.plan.first_duration)
-        last_duration = time_helper.parse_duration(self.log_item.plan.last_duration)
+        time_diff_first, time_diff_last = self.log_item.time_diffs()
 
-        time_diff_last = last_duration - self.log_item.tail().duration() if last_duration is not None else 0.0
-        time_diff_first = first_duration - self.log_item.tail().duration() if first_duration is not None else 0.0
-        if time_diff_first >= 0 and first_duration is not None:
+        if time_diff_first is not None and time_diff_first  >= 0:
             color = "green"
-        elif time_diff_last >= 0:
-            color = "black"
-        else:
+        elif time_diff_last is not None and time_diff_last < 0:
             color = "red"
-        self.time_diff_label.value = '<p style="color:{}">{}</p>'.format(color, time_helper.duration_str(time_diff_last))
+        else:
+            color = "black"
+        duration_str = time_helper.duration_str(time_diff_last) if time_diff_last is not None else ""
+        self.time_diff_label.value = '<p style="color:{}">{}</p>'.format(color, duration_str)
 
         self.is_updating = False
 
@@ -451,9 +468,8 @@ class PlannerLoggerController:
         not_marked_minus = 0.0
         not_marked_total = 0.0
         for log in tail_logs:
-            last_duration = time_helper.parse_duration(log.plan.last_duration)
-
-            time_diff_last = last_duration - log.duration() if last_duration is not None else 0.0
+            _, time_diff_last = log.time_diffs()
+            time_diff_last = time_diff_last if time_diff_last is not None else 0.0
 
             if log.plan.is_marked:
                 if time_diff_last >= 0:
