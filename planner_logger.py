@@ -14,16 +14,18 @@ import debounce
 from IPython.core.debugger import set_trace
 
 class TwoStagePlanItem:
-    __slots__ = ["first_duration", "last_duration", "is_marked"]
+    __slots__ = ["first_duration", "last_duration", "is_marked", "is_mark_set"]
 
-    def __init__(self, first_duration: str = "", last_duration: str = "", is_marked: bool = False):
+    def __init__(self, first_duration: str = "", last_duration: str = "",
+                 is_marked: bool = False, is_mark_set: bool = False):
         self.first_duration = first_duration
         self.last_duration = last_duration
         self.is_marked = is_marked
+        self.is_mark_set = is_mark_set # Whether the mark is manually set
 
 
 class ContinuingLogItem(LogItem):
-    __slots__ = ["index", "is_continued", "manually_set_uncontinued", "previous_log", "next_log", "plan", "backup_plan"]
+    __slots__ = ["index", "is_continued", "previous_log", "next_log", "plan", "backup_plan"]
 
     def __init__(self, name: str, start_str: str, end_str: str,
                  index: int, plan: Optional[TwoStagePlanItem] = None,
@@ -33,7 +35,6 @@ class ContinuingLogItem(LogItem):
 
         self.index: int = index
         self.is_continued: bool = is_continued
-        self.manually_set_uncontinued = False
         self.previous_log: Optional[ContinuingLogItem] = None
         self.next_log: Optional[ContinuingLogItem] = None
         self.plan: TwoStagePlanItem = plan if plan is not None else TwoStagePlanItem()
@@ -74,7 +75,6 @@ class ContinuingLogItem(LogItem):
             return self.next_log.tail()
 
     def clear_link_state(self):
-        self.is_continued = False
         self.previous_log = None
         self.next_log = None
 
@@ -128,6 +128,7 @@ class PlannerLoggerItemBox(widgets.HBox):
                 return
 
             self.log_item.plan.is_marked = change["new"]
+            self.log_item.plan.is_mark_set = True
             if self.log_item.is_in_list():
                 controller.update_link()
             controller.update_summary_and_save()
@@ -140,7 +141,6 @@ class PlannerLoggerItemBox(widgets.HBox):
 
             new_value = change["new"]
             self.log_item.is_continued = new_value
-            self.log_item.manually_set_uncontinued = not new_value
 
             controller.update_link()
             controller.update_summary_and_save()
@@ -309,16 +309,15 @@ class PlannerLoggerController:
                                     end_str = dic["end_str"]
                                     index = dic["index"]
                                     is_continued = dic["is_continued"]
-                                    manually_set_uncontinued = dic["manually_set_uncontinued"]
                                     plan_dic = dic["plan"]
 
                                     if isinstance(plan_dic, dict):
                                         first_duration = plan_dic["first_duration"]
                                         last_duration = plan_dic["last_duration"]
                                         is_marked = plan_dic["is_marked"]
-                                        plan = TwoStagePlanItem(first_duration, last_duration, is_marked)
+                                        is_mark_set = plan_dic.get("is_mark_set", False)
+                                        plan = TwoStagePlanItem(first_duration, last_duration, is_marked, is_mark_set)
                                         log = ContinuingLogItem(name, start_str, end_str, index, plan, is_continued)
-                                        log.manually_set_uncontinued = manually_set_uncontinued
                                         _logs.append(log)
 
                         _bonus_formula = data["bonus_formula"]
@@ -365,6 +364,7 @@ class PlannerLoggerController:
         def on_remove_marks_click(_):
             for item in self.logs:
                 item.is_marked = False
+                item.is_mark_set = True
             update(UpdateType.REMOVE_MARKS)
 
         remove_marks_button.on_click(on_remove_marks_click)
@@ -434,16 +434,17 @@ class PlannerLoggerController:
             log.clear_link_state()
 
             same_name_logs = [a_log for a_log in self.logs[0:index] if a_log.name == log.name]
-            if same_name_logs and not log.manually_set_uncontinued:
+            if same_name_logs and log.is_continued:
                 log.insert_to_linked_list(after_item=same_name_logs[-1])
                 log.backup_plan = copy.copy(log.plan)
-                log.plan = same_name_logs[-1].plan
+                log.plan = same_name_logs[-1].plan    
             else:
                 # When a log is changed from continued to uncontinued, it usually
                 # has the same type of mark state as the previous log with the same name
-                is_marked = log.plan.is_marked
                 log.plan = log.backup_plan
-                log.plan.is_marked = is_marked
+                if not log.plan.is_mark_set and same_name_logs:
+                    log.plan.is_marked = same_name_logs[-1].plan.is_marked
+                
             
         # should update after linked list structure is completely constructed
         for box in self.log_box.children:
@@ -544,6 +545,7 @@ class PlannerLoggerController:
                         "first_duration": log.plan.first_duration,
                         "last_duration": log.plan.last_duration,
                         "is_marked": log.plan.is_marked,
+                        "is_mark_set": log.plan.is_mark_set,
                     }
 
                     dic = {
@@ -552,7 +554,6 @@ class PlannerLoggerController:
                         "end_str": log.end.strftime("%H:%M") if log.end is not None else "''",
                         "index": log.index,
                         "is_continued": log.is_continued,
-                        "manually_set_uncontinued": log.manually_set_uncontinued,
                         "plan": plan_dic,
                     }
 
