@@ -439,8 +439,7 @@ class PlannerLoggerController:
                 log.backup_plan = copy.copy(log.plan)
                 log.plan = same_name_logs[-1].plan    
             else:
-                # When a log is changed from continued to uncontinued, it usually
-                # has the same type of mark state as the previous log with the same name
+                log.is_continued = False
                 log.plan = log.backup_plan
                 if not log.plan.is_mark_set and same_name_logs:
                     log.plan.is_marked = same_name_logs[-1].plan.is_marked
