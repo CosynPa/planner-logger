@@ -287,10 +287,12 @@ class PlannerLoggerItemBox(widgets.HBox):
 
 class PlannerLoggerController:
     __slots__ = ["logs", "plans", "container", "file", "suspend_summary_update", "suspend_link_update",
+                 "previous_logs",
                  "log_box", "summary_box", "bonus_formula", "plan_time", "previous_bonus", "bonus"]
 
     def __init__(self, file: Optional[str] = None):
         _logs: List[ContinuingLogItem] = []
+        _previous_logs: List[ContinuingLogItem] = []
         _bonus_formula = None
         _plan_time = None
         _previous_bonus = None
@@ -300,25 +302,46 @@ class PlannerLoggerController:
                 with open(file) as data_file:
                     data = json.load(data_file)
                     if isinstance(data, dict):
+                        def parse_log(dic):
+                            try:
+                                if not isinstance(dic, dict):
+                                    return None
+
+                                name = dic["name"]
+                                start_str = dic["start_str"]
+                                end_str = dic["end_str"]
+                                index = dic["index"]
+                                is_continued = dic["is_continued"]
+                                plan_dic = dic["plan"]
+
+                                if not isinstance(plan_dic, dict):
+                                    return None
+
+                                first_duration = plan_dic["first_duration"]
+                                last_duration = plan_dic["last_duration"]
+                                is_marked = plan_dic["is_marked"]
+                                is_mark_set = plan_dic.get("is_mark_set", False)
+                                plan = TwoStagePlanItem(first_duration, last_duration, is_marked, is_mark_set)
+                                log = ContinuingLogItem(name, start_str, end_str, index, plan, is_continued)
+
+                                return log
+
+                            except KeyError:
+                                return None
+
                         logs = data["logs"]
                         if isinstance(logs, list):
                             for dic in logs:
-                                if isinstance(dic, dict):
-                                    name = dic["name"]
-                                    start_str = dic["start_str"]
-                                    end_str = dic["end_str"]
-                                    index = dic["index"]
-                                    is_continued = dic["is_continued"]
-                                    plan_dic = dic["plan"]
+                                log = parse_log(dic)
+                                if log is not None:
+                                    _logs.append(log)
 
-                                    if isinstance(plan_dic, dict):
-                                        first_duration = plan_dic["first_duration"]
-                                        last_duration = plan_dic["last_duration"]
-                                        is_marked = plan_dic["is_marked"]
-                                        is_mark_set = plan_dic.get("is_mark_set", False)
-                                        plan = TwoStagePlanItem(first_duration, last_duration, is_marked, is_mark_set)
-                                        log = ContinuingLogItem(name, start_str, end_str, index, plan, is_continued)
-                                        _logs.append(log)
+                        previous_logs = data.get("previous_logs")
+                        if isinstance(previous_logs, list):
+                            for dic in previous_logs:
+                                log = parse_log(dic)
+                                if log is not None:
+                                    _previous_logs.append(log)
 
                         _bonus_formula = data["bonus_formula"]
                         _plan_time = data["plan_time"]
@@ -328,6 +351,7 @@ class PlannerLoggerController:
                 pass
 
         self.logs = _logs
+        self.previous_logs = _previous_logs
 
         self.log_box = widgets.VBox()
         remove_marks_button = widgets.Button(description="Remove marks")
@@ -376,7 +400,12 @@ class PlannerLoggerController:
         plus_button.on_click(on_plus_button_click)
 
         def on_clear_button_click(_):
-            self.logs.clear()
+            # Save logs to previous_logs, keep recent 100 logs
+            self.logs.reverse()
+            self.previous_logs = self.logs + self.previous_logs
+            self.previous_logs = self.previous_logs[0:100]
+
+            self.logs = []
             update(UpdateType.RESET)
 
         clear_button.on_click(on_clear_button_click)
@@ -441,8 +470,14 @@ class PlannerLoggerController:
             else:
                 log.is_continued = False
                 log.plan = log.backup_plan
-                if not log.plan.is_mark_set and same_name_logs:
-                    log.plan.is_marked = same_name_logs[-1].plan.is_marked
+                if not log.plan.is_mark_set:
+                    if same_name_logs:
+                        log.plan.is_marked = same_name_logs[-1].plan.is_marked
+                    else:
+                        same_name_logs_in_previous = [a_log for a_log in 
+                                self.previous_logs if a_log.name == log.name]
+                        if same_name_logs_in_previous:
+                            log.plan.is_marked = same_name_logs_in_previous[0].plan.is_marked
                 
             
         # should update after linked list structure is completely constructed
@@ -538,8 +573,7 @@ class PlannerLoggerController:
 
         try:
             with open(self.file, mode="w") as f:
-                logs = []
-                for log in self.logs:
+                def log_dic(log):
                     plan_dic = {
                         "first_duration": log.plan.first_duration,
                         "last_duration": log.plan.last_duration,
@@ -556,9 +590,19 @@ class PlannerLoggerController:
                         "plan": plan_dic,
                     }
 
-                    logs.append(dic)
+                    return dic
+
+                logs = []
+                for log in self.logs:
+                    logs.append(log_dic(log))
+
+                previous_logs = []
+                for log in self.previous_logs:
+                    previous_logs.append(log_dic(log))
+
                 root = {
                     "logs": logs,
+                    "previous_logs": previous_logs,
                     "bonus_formula": self.bonus_formula.value,
                     "plan_time": self.plan_time.value,
                     "previous_bonus": self.previous_bonus.value,
