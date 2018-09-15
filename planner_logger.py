@@ -387,8 +387,8 @@ class PlannerLoggerController:
 
         def on_remove_marks_click(_):
             for item in self.logs:
-                item.is_marked = False
-                item.is_mark_set = True
+                item.plan.is_marked = False
+                item.plan.is_mark_set = True
             update(UpdateType.REMOVE_MARKS)
 
         remove_marks_button.on_click(on_remove_marks_click)
