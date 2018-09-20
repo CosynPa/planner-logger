@@ -235,8 +235,8 @@ class PlannerLoggerItemBox(widgets.HBox):
         end_now.on_click(on_end_now_click)
 
         super().__init__(children=[
-            check_box, continue_check, name,
-            duration_label, time_diff_label, first_duration, last_duration,
+            check_box, name,
+            duration_label, time_diff_label, first_duration, last_duration, continue_check,
             spacing,
             start, start_now, last_button,
             end, end_now,
