@@ -527,20 +527,35 @@ class PlannerLoggerController:
 
         marked_title = widgets.Label(value="Marked:",
             layout=layout)
-        marked_summary = widgets.Label(
-            value="Total: {}, plus: {}, minus: {}".format(
-                time_helper.duration_str(marked_total),
-                time_helper.duration_str(marked_plus),
-                time_helper.duration_str(marked_minus)),
-            layout=layout)
+
+        if self.show_plan_time:
+            marked_summary = widgets.Label(
+                value="Total: {}, plus: {}, minus: {}".format(
+                    time_helper.duration_str(marked_total),
+                    time_helper.duration_str(marked_plus),
+                    time_helper.duration_str(marked_minus)),
+                layout=layout)
+        else:
+            marked_summary = widgets.Label(
+                value="Total: {}".format(
+                    time_helper.duration_str(marked_total)),
+                layout=layout)
+        
         not_marked_title = widgets.Label(value="Not marked:",
             layout=layout)
-        not_marked_summary = widgets.Label(
-            value="Total: {}, plus: {}, minus: {}".format(
-                time_helper.duration_str(not_marked_total),
-                time_helper.duration_str(not_marked_plus),
-                time_helper.duration_str(not_marked_minus)),
-            layout=layout)
+
+        if self.show_plan_time:
+            not_marked_summary = widgets.Label(
+                value="Total: {}, plus: {}, minus: {}".format(
+                    time_helper.duration_str(not_marked_total),
+                    time_helper.duration_str(not_marked_plus),
+                    time_helper.duration_str(not_marked_minus)),
+                layout=layout)
+        else:
+            not_marked_summary = widgets.Label(
+                value="Total: {}".format(
+                    time_helper.duration_str(not_marked_total)),
+                layout=layout)
 
         self.summary_box.children = [marked_title, marked_summary, not_marked_title, not_marked_summary]
 
