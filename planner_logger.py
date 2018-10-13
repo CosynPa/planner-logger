@@ -92,13 +92,14 @@ class ContinuingLogItem(LogItem):
 
 
 class PlannerLoggerItemBox(widgets.HBox):
-    def __init__(self, log_item: ContinuingLogItem, controller):
+    def __init__(self, log_item: ContinuingLogItem, controller, show_plan_time: bool):
         style = {"description_width": "initial"}
 
         check_box = widgets.Checkbox(value=log_item.is_marked,
                                      layout=widgets.Layout(width="20px"),
                                      indent=False)
-        name = widgets.Text(value=log_item.name, layout=widgets.Layout(width="100px"))
+        name_width = "100px" if show_plan_time else "200px"
+        name = widgets.Text(value=log_item.name, layout=widgets.Layout(width=name_width))
 
         continue_check = widgets.Checkbox(value=log_item.is_continued,
                                           layout=widgets.Layout(width="20px"),
@@ -234,9 +235,9 @@ class PlannerLoggerItemBox(widgets.HBox):
 
         end_now.on_click(on_end_now_click)
 
-        super().__init__(children=[
-            check_box, name,
-            duration_label, time_diff_label, first_duration, last_duration, continue_check,
+        plan_time_widgets = [time_diff_label, first_duration, last_duration] if show_plan_time else []
+        super().__init__(children=[check_box, name, duration_label] + plan_time_widgets + [
+            continue_check,
             spacing,
             start, start_now, last_button,
             end, end_now,
@@ -286,11 +287,13 @@ class PlannerLoggerItemBox(widgets.HBox):
         self.is_updating = False
 
 class PlannerLoggerController:
-    __slots__ = ["logs", "plans", "container", "file", "suspend_summary_update", "suspend_link_update",
+    __slots__ = ["show_plan_time",
+                 "logs", "plans", "container", "file", "suspend_summary_update", "suspend_link_update",
                  "previous_logs",
                  "log_box", "summary_box", "bonus_formula", "plan_time", "previous_bonus", "bonus"]
 
-    def __init__(self, file: Optional[str] = None):
+    def __init__(self, file: Optional[str] = None, show_plan_time: bool = False):
+        self.show_plan_time = show_plan_time
         _logs: List[ContinuingLogItem] = []
         _previous_logs: List[ContinuingLogItem] = []
         _bonus_formula = None
@@ -375,10 +378,11 @@ class PlannerLoggerController:
 
         self.bonus = widgets.Label(layout=widgets.Layout(widht="150px"))
 
+        plan_time_summary_widgets = [default_formula_button, 
+            self.bonus_formula, self.plan_time, self.previous_bonus, self.bonus] if self.show_plan_time else []
         self.container = widgets.VBox(children=[self.log_box, plus_button, remove_marks_button, clear_button,
-                                                self.summary_box,
-                                                default_formula_button,
-                                                self.bonus_formula, self.plan_time, self.previous_bonus, self.bonus])
+                                                self.summary_box] + plan_time_summary_widgets)
+
 
         class UpdateType(enum.Enum):
             APPEND = enum.auto()
@@ -428,12 +432,12 @@ class PlannerLoggerController:
         def update(update_type: UpdateType):
             if update_type is UpdateType.APPEND:
                 self.log_box.children = list(self.log_box.children) + [
-                    PlannerLoggerItemBox(self.logs[-1], self),
+                    PlannerLoggerItemBox(self.logs[-1], self, self.show_plan_time),
                     ]
             elif update_type is UpdateType.RESET:
                 old = self.log_box.children
 
-                self.log_box.children = [PlannerLoggerItemBox(log_item, self)
+                self.log_box.children = [PlannerLoggerItemBox(log_item, self, self.show_plan_time)
                                          for log_item in self.logs]
 
                 for box in old:
