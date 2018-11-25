@@ -286,6 +286,13 @@ class PlannerLoggerItemBox(widgets.HBox):
 
         self.is_updating = False
 
+
+class UpdateType(enum.Enum):
+    APPEND = enum.auto()
+    RESET = enum.auto()
+    REMOVE_MARKS = enum.auto()
+
+
 class PlannerLoggerController:
     __slots__ = ["show_plan_time",
                  "logs", "plans", "container", "file", "suspend_summary_update", "suspend_link_update",
@@ -383,23 +390,17 @@ class PlannerLoggerController:
         self.container = widgets.VBox(children=[self.log_box, plus_button, remove_marks_button, clear_button,
                                                 self.summary_box] + plan_time_summary_widgets)
 
-
-        class UpdateType(enum.Enum):
-            APPEND = enum.auto()
-            RESET = enum.auto()
-            REMOVE_MARKS = enum.auto()
-
         def on_remove_marks_click(_):
             for item in self.logs:
                 item.plan.is_marked = False
                 item.plan.is_mark_set = True
-            update(UpdateType.REMOVE_MARKS)
+            self.update(UpdateType.REMOVE_MARKS)
 
         remove_marks_button.on_click(on_remove_marks_click)
 
         def on_plus_button_click(_):
             self.logs.append(ContinuingLogItem("", "", "", len(self.logs)))
-            update(UpdateType.APPEND)
+            self.update(UpdateType.APPEND)
 
         plus_button.on_click(on_plus_button_click)
 
@@ -410,7 +411,7 @@ class PlannerLoggerController:
             self.previous_logs = self.previous_logs[0:100]
 
             self.logs = []
-            update(UpdateType.RESET)
+            self.update(UpdateType.RESET)
 
         clear_button.on_click(on_clear_button_click)
 
@@ -429,33 +430,40 @@ class PlannerLoggerController:
         self.suspend_summary_update = False
         self.suspend_link_update = False
 
-        def update(update_type: UpdateType):
-            if update_type is UpdateType.APPEND:
-                self.log_box.children = list(self.log_box.children) + [
-                    PlannerLoggerItemBox(self.logs[-1], self, self.show_plan_time),
-                    ]
-            elif update_type is UpdateType.RESET:
-                old = self.log_box.children
+        self.update(UpdateType.RESET)
 
-                self.log_box.children = [PlannerLoggerItemBox(log_item, self, self.show_plan_time)
-                                         for log_item in self.logs]
+    def update(self, update_type: UpdateType):
+        if update_type is UpdateType.APPEND:
+            self.log_box.children = list(self.log_box.children) + [
+                PlannerLoggerItemBox(self.logs[-1], self, self.show_plan_time),
+                ]
+        elif update_type is UpdateType.RESET:
+            old = self.log_box.children
 
-                for box in old:
-                    for child in box.children:
-                        child.close()
-                    box.close()
-            elif update_type is UpdateType.REMOVE_MARKS:
-                self.suspend_summary_update = True  # Avoid trigger summary update each time for every check box
-                for iterm_box in self.log_box.children:
-                    iterm_box.check_box.value = False
-                self.suspend_summary_update = False
-            else:
-                assert False, "Unexpected update type"
+            self.log_box.children = [PlannerLoggerItemBox(log_item, self, self.show_plan_time)
+                                     for log_item in self.logs]
 
-            self.update_link()
-            self.update_summary_and_save()
+            for box in old:
+                for child in box.children:
+                    child.close()
+                box.close()
+        elif update_type is UpdateType.REMOVE_MARKS:
+            self.suspend_summary_update = True  # Avoid trigger summary update each time for every check box
+            for iterm_box in self.log_box.children:
+                iterm_box.check_box.value = False
+            self.suspend_summary_update = False
+        else:
+            assert False, "Unexpected update type"
 
-        update(UpdateType.RESET)
+        self.update_link()
+        self.update_summary_and_save()
+
+    def set_logs(self, logs: List[ContinuingLogItem]):
+        for index, log in enumerate(logs):
+            log.index = index
+
+        self.logs = logs
+        self.update(UpdateType.RESET)
 
     def update_link(self):
         if self.suspend_link_update:
