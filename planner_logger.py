@@ -490,6 +490,8 @@ class PlannerLoggerController:
                                 self.previous_logs if a_log.name == log.name]
                         if same_name_logs_in_previous:
                             log.plan.is_marked = same_name_logs_in_previous[0].plan.is_marked
+                        else:
+                            log.plan.is_marked = False
                 
             
         # should update after linked list structure is completely constructed
