@@ -533,7 +533,7 @@ class PlannerLoggerController:
                     not_marked_minus += time_diff_last
                 not_marked_total += log.duration()
 
-        layout = widgets.Layout(width="100%", max_width="100%")
+        layout = widgets.Layout(width="90%", max_width="90%")
 
         marked_title = widgets.Label(value="Marked:",
             layout=layout)
