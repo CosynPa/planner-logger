@@ -93,7 +93,7 @@ class ContinuingLogItem(LogItem):
 
 
 class PlannerLoggerItemBox(widgets.HBox):
-    def __init__(self, log_item: ContinuingLogItem, controller, show_plan_time: bool):
+    def __init__(self, log_item: ContinuingLogItem, controller, show_plan_time: bool, show_upload: bool):
         style = {"description_width": "initial"}
 
         check_box = widgets.Checkbox(value=log_item.is_marked,
@@ -113,7 +113,7 @@ class PlannerLoggerItemBox(widgets.HBox):
         last_duration = widgets.Text(value=log_item.plan.last_duration,
             description="Last duration:", layout=widgets.Layout(width="150px"), style=style)
 
-        spacing = widgets.HBox(layout=widgets.Layout(width="40px"))
+        spacing = widgets.HBox(layout=widgets.Layout(width="25px"))
 
         start_text = time_helper.time_str(log_item.start)
         start = widgets.Text(value=start_text, description="Start:", layout=widgets.Layout(width="100px"), style=style)
@@ -124,6 +124,8 @@ class PlannerLoggerItemBox(widgets.HBox):
         start_now = widgets.Button(description="Now", layout=widgets.Layout(width="auto"))
         last_button = widgets.Button(description="Last", layout=widgets.Layout(width="auto"))
         end_now = widgets.Button(description="Now", layout=widgets.Layout(width="auto"))
+
+        upload_button = widgets.Button(description="↑", layout=widgets.Layout(width="auto"))
 
         def on_check(change):
             if self.is_updating:
@@ -236,13 +238,25 @@ class PlannerLoggerItemBox(widgets.HBox):
 
         end_now.on_click(on_end_now_click)
 
+        def on_upload_click(_):
+            if controller.reference_controller is not None:
+                new_log = ContinuingLogItem(self.log_item.name, 
+                    time_helper.time_str(self.log_item.start),
+                    time_helper.time_str(self.log_item.end),
+                    len(controller.reference_controller.logs), plan=None, is_continued=True)
+                controller.reference_controller.logs.append(new_log)
+                controller.reference_controller.update(UpdateType.APPEND)
+
+        upload_button.on_click(on_upload_click)
+
         plan_time_widgets = [time_diff_label, first_duration, last_duration] if show_plan_time else []
+        upload_widgets = [upload_button] if show_upload else []
         super().__init__(children=[check_box, name, duration_label] + plan_time_widgets + [
             continue_check,
             spacing,
             start, start_now, last_button,
             end, end_now,
-        ])
+        ] + upload_widgets)
 
         self.log_item = log_item
         self.check_box = check_box
@@ -295,12 +309,12 @@ class UpdateType(enum.Enum):
 
 
 class PlannerLoggerController:
-    __slots__ = ["show_plan_time",
+    __slots__ = ["show_plan_time", "reference_controller",
                  "logs", "plans", "container", "file", "suspend_summary_update", "suspend_link_update",
                  "previous_logs",
                  "log_box", "summary_box", "bonus_formula", "plan_time", "previous_bonus", "bonus"]
 
-    def __init__(self, file: Optional[str] = None, show_plan_time: bool = False):
+    def __init__(self, file: Optional[str] = None, show_plan_time: bool = False, reference_controller: Optional["PlannerLoggerController"] = None):
         self.show_plan_time = show_plan_time
         _logs: List[ContinuingLogItem] = []
         _previous_logs: List[ContinuingLogItem] = []
@@ -308,6 +322,7 @@ class PlannerLoggerController:
         _plan_time = None
         _previous_bonus = None
         self.file = file
+        self.reference_controller = reference_controller
         if file is not None:
             try:
                 with open(file) as data_file:
@@ -436,12 +451,12 @@ class PlannerLoggerController:
     def update(self, update_type: UpdateType):
         if update_type is UpdateType.APPEND:
             self.log_box.children = list(self.log_box.children) + [
-                PlannerLoggerItemBox(self.logs[-1], self, self.show_plan_time),
+                PlannerLoggerItemBox(self.logs[-1], self, self.show_plan_time, self.reference_controller is not None),
                 ]
         elif update_type is UpdateType.RESET:
             old = self.log_box.children
 
-            self.log_box.children = [PlannerLoggerItemBox(log_item, self, self.show_plan_time)
+            self.log_box.children = [PlannerLoggerItemBox(log_item, self, self.show_plan_time, self.reference_controller is not None)
                                      for log_item in self.logs]
 
             for box in old:
@@ -464,6 +479,10 @@ class PlannerLoggerController:
             log.index = index
 
         self.logs = logs
+        self.update(UpdateType.RESET)
+
+    def set_reference_controller(self, reference_controller):
+        self.reference_controller = reference_controller
         self.update(UpdateType.RESET)
 
     def update_link(self):
