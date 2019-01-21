@@ -38,6 +38,7 @@ class ContinuingLogItem(LogItem):
         self.previous_log: Optional[ContinuingLogItem] = None
         self.next_log: Optional[ContinuingLogItem] = None
         self.plan: TwoStagePlanItem = plan if plan is not None else TwoStagePlanItem()
+        # Backup the plan when you set continuing, and recover the previous plan when you set uncontinuing.
         self.backup_plan: TwoStagePlanItem = self.plan
 
     def duration(self) -> float:
