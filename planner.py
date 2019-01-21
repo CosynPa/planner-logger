@@ -75,8 +75,8 @@ class PlanController:
 
         # Construct widgets
 
-        title_label = widgets.Label(value="Enter your plans here:", layout=widgets.Layout(width="100%"))
-        plan_text = widgets.Textarea(layout=widgets.Layout(height="40rem", width="100%"))
+        title_label = widgets.Label(value="Enter your plans here:", layout=widgets.Layout(width="90%"))
+        plan_text = widgets.Textarea(layout=widgets.Layout(height="40rem", width="90%"))
 
         end_time_text = widgets.Text(value=end_time_string, description="End time:")
 
@@ -97,11 +97,11 @@ class PlanController:
                                                   indent=False)
         long_time_box = widgets.HBox()
 
-        finish_time_label = widgets.Label(value="Planning to finish in: ", layout=widgets.Layout(width="100%"))
+        finish_time_label = widgets.Label(value="Planning to finish in: ", layout=widgets.Layout(width="90%"))
 
-        time_left = widgets.Label(value="Time left: ", layout=widgets.Layout(width="100%"))
+        time_left = widgets.Label(value="Time left: ", layout=widgets.Layout(width="90%"))
 
-        total_time = widgets.Label(value="Total: ", layout=widgets.Layout(width="100%"))
+        total_time = widgets.Label(value="Total: ", layout=widgets.Layout(width="90%"))
 
         plan_box = widgets.VBox()
 
