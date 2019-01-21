@@ -61,6 +61,10 @@ def parse_duration(time_string: str) -> Optional[float]:
         return sign * ((day_number or 0.) * 86400. + (hour_number or 0.) * 3600. + (minute_number or 0.) * 60.)
 
 
+def time_str(time: Optional[datetime.datetime]) -> str:
+    return time.strftime("%H:%M") if time is not None else ""
+
+
 def duration_str(seconds: float) -> str:
     def positive_time(positive_seconds: float) -> str:
         days, left = divmod(positive_seconds, 86400)

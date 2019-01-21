@@ -97,10 +97,10 @@ class LogController:
                                              indent=False)
                 name = widgets.Text(value=log_item.name)
 
-                start_text = log_item.start.strftime("%H:%M") if log_item.start is not None else ""
+                start_text = time_helper.time_str(log_item.start)
                 start = widgets.Text(value=start_text, description="Start:", layout=widgets.Layout(width="30%"))
 
-                end_text = log_item.end.strftime("%H:%M") if log_item.end is not None else ""
+                end_text = time_helper.time_str(log_item.end)
                 end = widgets.Text(value=end_text, description="End:", layout=widgets.Layout(width="30%"))
 
                 start_now = widgets.Button(description="Now", layout=widgets.Layout(width="70px"))
@@ -136,7 +136,7 @@ class LogController:
                 start.observe(on_start_change, "value")
 
                 def on_start_now_click(_):
-                    start.value = datetime.datetime.now().strftime("%H:%M")
+                    start.value = time_helper.time_str(datetime.datetime.now())
 
                 start_now.on_click(on_start_now_click)
 
@@ -144,7 +144,7 @@ class LogController:
                     if index >= 1:
                         last_end = self.logs[index - 1].end
                         if last_end is not None:
-                            start.value = last_end.strftime("%H:%M")
+                            start.value = time_helper.time_str(last_end)
 
                 last_button.on_click(on_last_click)
 
@@ -156,7 +156,7 @@ class LogController:
                 end.observe(on_end_change, "value")
 
                 def on_end_now_click(_):
-                    end.value = datetime.datetime.now().strftime("%H:%M")
+                    end.value = time_helper.time_str(datetime.datetime.now())
 
                 end_now.on_click(on_end_now_click)
 
@@ -260,8 +260,8 @@ class LogController:
                 for log in self.logs:
                     dic = {
                         "name": log.name,
-                        "start_str": log.start.strftime("%H:%M") if log.start is not None else "''",
-                        "end_str": log.end.strftime("%H:%M") if log.end is not None else "''",
+                        "start_str": time_helper.time_str(log.start),
+                        "end_str": time_helper.time_str(log.end),
                         "is_marked": log.is_marked
                     }
 

@@ -115,10 +115,10 @@ class PlannerLoggerItemBox(widgets.HBox):
 
         spacing = widgets.HBox(layout=widgets.Layout(width="40px"))
 
-        start_text = log_item.start.strftime("%H:%M") if log_item.start is not None else ""
+        start_text = time_helper.time_str(log_item.start)
         start = widgets.Text(value=start_text, description="Start:", layout=widgets.Layout(width="100px"), style=style)
 
-        end_text = log_item.end.strftime("%H:%M") if log_item.end is not None else ""
+        end_text = time_helper.time_str(log_item.end)
         end = widgets.Text(value=end_text, description="End:", layout=widgets.Layout(width="100px"), style=style)
 
         start_now = widgets.Button(description="Now", layout=widgets.Layout(width="auto"))
@@ -201,7 +201,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             if self.is_updating:
                 return
             
-            start.value = datetime.datetime.now().strftime("%H:%M")
+            start.value = time_helper.time_str(datetime.datetime.now())
 
         start_now.on_click(on_start_now_click)
 
@@ -212,7 +212,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             if self.log_item.index >= 1:
                 last_end = controller.logs[self.log_item.index - 1].end
                 if last_end is not None:
-                    start.value = last_end.strftime("%H:%M")
+                    start.value = time_helper.time_str(last_end)
 
         last_button.on_click(on_last_click)
 
@@ -232,7 +232,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             if self.is_updating:
                 return
             
-            end.value = datetime.datetime.now().strftime("%H:%M")
+            end.value = time_helper.time_str(datetime.datetime.now())
 
         end_now.on_click(on_end_now_click)
 
@@ -613,8 +613,8 @@ class PlannerLoggerController:
 
                     dic = {
                         "name": log.name,
-                        "start_str": log.start.strftime("%H:%M") if log.start is not None else "''",
-                        "end_str": log.end.strftime("%H:%M") if log.end is not None else "''",
+                        "start_str": time_helper.time_str(log.start),
+                        "end_str": time_helper.time_str(log.end),
                         "index": log.index,
                         "is_continued": log.is_continued,
                         "plan": plan_dic,
