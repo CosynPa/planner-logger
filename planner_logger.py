@@ -203,6 +203,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             if self.is_updating:
                 return
             
+            controller.register_undo()
             start.value = time_helper.time_str(datetime.datetime.now())
 
         start_now.on_click(on_start_now_click)
@@ -214,6 +215,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             if self.log_item.index >= 1:
                 last_end = controller.logs[self.log_item.index - 1].end
                 if last_end is not None:
+                    controller.register_undo()
                     start.value = time_helper.time_str(last_end)
 
         last_button.on_click(on_last_click)
@@ -234,6 +236,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             if self.is_updating:
                 return
             
+            controller.register_undo()
             end.value = time_helper.time_str(datetime.datetime.now())
 
         end_now.on_click(on_end_now_click)
@@ -244,6 +247,7 @@ class PlannerLoggerItemBox(widgets.HBox):
                     time_helper.time_str(self.log_item.start),
                     time_helper.time_str(self.log_item.end),
                     len(controller.reference_controller.logs), plan=None, is_continued=True)
+                controller.reference_controller.register_undo()
                 controller.reference_controller.logs.append(new_log)
                 controller.reference_controller.update(UpdateType.APPEND)
 
@@ -311,7 +315,8 @@ class UpdateType(enum.Enum):
 class PlannerLoggerController:
     __slots__ = ["show_plan_time", "reference_controller",
                  "logs", "plans", "container", "file", "suspend_summary_update", "suspend_link_update",
-                 "previous_logs",
+                 "previous_logs", 
+                 "undo_stack", "redo_stack", "undo_button", "redo_button",
                  "log_box", "summary_box", "bonus_formula", "plan_time", "previous_bonus", "bonus"]
 
     def __init__(self, file: Optional[str] = None, show_plan_time: bool = False, reference_controller: Optional["PlannerLoggerController"] = None):
@@ -378,11 +383,15 @@ class PlannerLoggerController:
 
         self.logs = _logs
         self.previous_logs = _previous_logs
+        self.undo_stack: List[List[ContinuingLogItem]] = []
+        self.redo_stack: List[List[ContinuingLogItem]] = []
 
         self.log_box = widgets.VBox()
         remove_marks_button = widgets.Button(description="Remove marks")
         plus_button = widgets.Button(description="+")
         clear_button = widgets.Button(description="Clear")
+        self.undo_button = widgets.Button(description="Undo")
+        self.redo_button = widgets.Button(description="Redo")
         self.summary_box = widgets.VBox()
 
         default_formula_button = widgets.Button(description="Default formula")
@@ -404,9 +413,11 @@ class PlannerLoggerController:
         plan_time_summary_widgets = [default_formula_button, 
             self.bonus_formula, self.plan_time, self.previous_bonus, self.bonus] if self.show_plan_time else []
         self.container = widgets.VBox(children=[self.log_box, plus_button, remove_marks_button, clear_button,
+                                                self.undo_button, self.redo_button,
                                                 self.summary_box] + plan_time_summary_widgets)
 
         def on_remove_marks_click(_):
+            self.register_undo()
             for item in self.logs:
                 item.plan.is_marked = False
                 item.plan.is_mark_set = True
@@ -415,6 +426,7 @@ class PlannerLoggerController:
         remove_marks_button.on_click(on_remove_marks_click)
 
         def on_plus_button_click(_):
+            self.register_undo()
             self.logs.append(ContinuingLogItem("", "", "", len(self.logs)))
             self.update(UpdateType.APPEND)
 
@@ -426,10 +438,29 @@ class PlannerLoggerController:
             self.previous_logs = self.logs + self.previous_logs
             self.previous_logs = self.previous_logs[0:100]
 
+            self.register_undo()
             self.logs = []
             self.update(UpdateType.RESET)
 
         clear_button.on_click(on_clear_button_click)
+
+        def on_undo_button_click(_):
+            if len(self.undo_stack) > 0:
+                self.register_redo()
+                self.logs = self.undo_stack.pop()
+                self.update_undo_redo()
+                self.update(UpdateType.RESET)
+
+        self.undo_button.on_click(on_undo_button_click)
+
+        def on_redo_button_click(_):
+            if len(self.redo_stack) > 0:
+                self.register_undo(clear_redo=False)
+                self.logs = self.redo_stack.pop()
+                self.update_undo_redo()
+                self.update(UpdateType.RESET)
+
+        self.redo_button.on_click(on_redo_button_click)
 
         def on_default_formula_click(_):
             self.bonus_formula.value = default_formula
@@ -446,7 +477,22 @@ class PlannerLoggerController:
         self.suspend_summary_update = False
         self.suspend_link_update = False
 
+        self.update_undo_redo()
         self.update(UpdateType.RESET)
+
+    def register_undo(self, clear_redo=True):
+        if clear_redo:
+            self.redo_stack.clear()
+        self.undo_stack.append(copy.deepcopy(self.logs))
+        self.update_undo_redo()
+
+    def register_redo(self):
+        self.redo_stack.append(copy.deepcopy(self.logs))
+        self.update_undo_redo()
+
+    def update_undo_redo(self):
+        self.undo_button.disabled = len(self.undo_stack) == 0
+        self.redo_button.disabled = len(self.redo_stack) == 0
 
     def update(self, update_type: UpdateType):
         if update_type is UpdateType.APPEND:
@@ -478,6 +524,7 @@ class PlannerLoggerController:
         for index, log in enumerate(logs):
             log.index = index
 
+        self.register_undo()
         self.logs = logs
         self.update(UpdateType.RESET)
 
