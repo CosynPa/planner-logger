@@ -94,6 +94,8 @@ class ContinuingLogItem(LogItem):
 
 class PlannerLoggerItemBox(widgets.HBox):
     def __init__(self, log_item: ContinuingLogItem, controller, show_plan_time: bool, show_upload: bool):
+        self.controller = controller
+
         style = {"description_width": "initial"}
 
         check_box = widgets.Checkbox(value=log_item.is_marked,
@@ -126,6 +128,8 @@ class PlannerLoggerItemBox(widgets.HBox):
         end_now = widgets.Button(description="Now", layout=widgets.Layout(width="auto"))
 
         upload_button = widgets.Button(description="↑", layout=widgets.Layout(width="auto"))
+        uploaded_check = widgets.Checkbox(value=False, layout=widgets.Layout(width="15px"), indent=False)
+        uploaded_check.disabled = True
 
         def on_check(change):
             if self.is_updating:
@@ -251,16 +255,18 @@ class PlannerLoggerItemBox(widgets.HBox):
                 controller.reference_controller.logs.append(new_log)
                 controller.reference_controller.update(UpdateType.APPEND)
 
+                self.update()
+
         upload_button.on_click(on_upload_click)
 
+        upload_widgets = [upload_button, uploaded_check] if show_upload else []
         plan_time_widgets = [time_diff_label, first_duration, last_duration] if show_plan_time else []
-        upload_widgets = [upload_button] if show_upload else []
-        super().__init__(children=[check_box, name, duration_label] + plan_time_widgets + [
+        super().__init__(children=[check_box] + upload_widgets + [name, duration_label] + plan_time_widgets + [
             continue_check,
             spacing,
             start, start_now, last_button,
             end, end_now,
-        ] + upload_widgets)
+        ])
 
         self.log_item = log_item
         self.check_box = check_box
@@ -269,6 +275,7 @@ class PlannerLoggerItemBox(widgets.HBox):
         self.last_duration = last_duration
         self.time_diff_label = time_diff_label
         self.duration_label = duration_label
+        self.uploaded_check = uploaded_check
 
         self.is_updating = False
 
@@ -302,6 +309,12 @@ class PlannerLoggerItemBox(widgets.HBox):
             color = "black"
         duration_str = time_helper.duration_str(time_diff_last) if time_diff_last is not None else ""
         self.time_diff_label.value = '<p style="color:{}">{}</p>'.format(color, duration_str)
+
+        if self.controller.reference_controller is not None:
+            any_match = any(log.start == self.log_item.start and log.end == self.log_item.end
+                for log in reversed(self.controller.reference_controller.logs))
+
+            self.uploaded_check.value = any_match
 
         self.is_updating = False
 
