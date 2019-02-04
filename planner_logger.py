@@ -259,9 +259,9 @@ class PlannerLoggerItemBox(widgets.HBox):
 
         upload_button.on_click(on_upload_click)
 
-        upload_widgets = [upload_button, uploaded_check] if show_upload else []
+        upload_widgets = [uploaded_check, upload_button] if show_upload else []
         plan_time_widgets = [time_diff_label, first_duration, last_duration] if show_plan_time else []
-        super().__init__(children=[check_box] + upload_widgets + [name, duration_label] + plan_time_widgets + [
+        super().__init__(children=[check_box, name] + upload_widgets + [duration_label] + plan_time_widgets + [
             continue_check,
             spacing,
             start, start_now, last_button,
@@ -275,6 +275,7 @@ class PlannerLoggerItemBox(widgets.HBox):
         self.last_duration = last_duration
         self.time_diff_label = time_diff_label
         self.duration_label = duration_label
+        self.upload_button = upload_button
         self.uploaded_check = uploaded_check
 
         self.is_updating = False
@@ -311,7 +312,10 @@ class PlannerLoggerItemBox(widgets.HBox):
         self.time_diff_label.value = '<p style="color:{}">{}</p>'.format(color, duration_str)
 
         if self.controller.reference_controller is not None:
-            any_match = any(log.start == self.log_item.start is not None and log.end == self.log_item.end is not None
+            self_valid = self.log_item.start is not None and self.log_item.end is not None
+            self.upload_button.disabled = not self_valid
+
+            any_match = self_valid and any(log.start == self.log_item.start and log.end == self.log_item.end
                 for log in reversed(self.controller.reference_controller.logs))
 
             self.uploaded_check.value = any_match
