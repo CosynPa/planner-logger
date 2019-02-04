@@ -311,7 +311,7 @@ class PlannerLoggerItemBox(widgets.HBox):
         self.time_diff_label.value = '<p style="color:{}">{}</p>'.format(color, duration_str)
 
         if self.controller.reference_controller is not None:
-            any_match = any(log.start == self.log_item.start and log.end == self.log_item.end
+            any_match = any(log.start == self.log_item.start is not None and log.end == self.log_item.end is not None
                 for log in reversed(self.controller.reference_controller.logs))
 
             self.uploaded_check.value = any_match
