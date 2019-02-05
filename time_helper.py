@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from enum import Flag, auto
 import datetime
 
@@ -61,7 +61,7 @@ def parse_duration(time_string: str) -> Optional[float]:
         return sign * ((day_number or 0.) * 86400. + (hour_number or 0.) * 3600. + (minute_number or 0.) * 60.)
 
 
-def time_str(time: Optional[datetime.datetime]) -> str:
+def time_str(time: Optional[Union[datetime.datetime, datetime.time]]) -> str:
     return time.strftime("%H:%M") if time is not None else ""
 
 
@@ -84,7 +84,21 @@ def duration_str(seconds: float) -> str:
         return "-" + positive_time(-seconds)
 
 
-def parse_time(time_string: str) -> Tuple[Optional[datetime.datetime], TimeType]:
+def parse_time(time_string: str) -> Optional[datetime.time]:
+    time_string = time_string.strip()
+
+    a_format = "%H:%M"
+
+    the_time: Optional[datetime.time]
+    try:
+        the_time = datetime.datetime.strptime(time_string, a_format).time()
+    except ValueError:
+        the_time = None
+
+    return the_time
+
+
+def parse_datetime(time_string: str) -> Tuple[Optional[datetime.datetime], TimeType]:
     time_string = time_string.strip()
 
     formats = [
@@ -119,3 +133,13 @@ def parse_time(time_string: str) -> Tuple[Optional[datetime.datetime], TimeType]
         the_time = the_time.replace(year=datetime.datetime.now().year)
 
     return the_time, the_type
+
+
+def time_diff(time1: datetime.time, time2: datetime.time) -> float:
+    date = datetime.datetime.fromtimestamp(0).date()
+
+    datetime1 = datetime.datetime.combine(date, time1)
+    datetime2 = datetime.datetime.combine(date, time2)
+
+    return (datetime1 - datetime2).total_seconds()
+

@@ -217,7 +217,7 @@ class PlanController:
 
         time_type: TimeType
         nullable_finish_time: Optional[datetime.datetime]
-        nullable_finish_time, time_type,  = time_helper.parse_time(self._end_time_text.value)
+        nullable_finish_time, time_type,  = time_helper.parse_datetime(self._end_time_text.value)
         if time_type is TimeType.NONE:
             self._time_left.value = "Time left: "
         else:

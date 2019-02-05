@@ -14,13 +14,13 @@ class LogItem:
 
     def __init__(self, name: str, start_str: str, end_str: str, is_marked: bool = False):
         self.name: str = name
-        self.start: Optional[datetime.datetime] = time_helper.parse_time(start_str)[0]
-        self.end: Optional[datetime.datetime] = time_helper.parse_time(end_str)[0]
+        self.start: Optional[datetime.time] = time_helper.parse_time(start_str)
+        self.end: Optional[datetime.time] = time_helper.parse_time(end_str)
         self.is_marked: bool = is_marked
 
     def duration(self) -> float:
         if self.start is not None and self.end is not None:
-            duration = (self.end - self.start).total_seconds()
+            duration = time_helper.time_diff(self.end, self.start)
             return duration if duration >= 0 else duration + 86400.
         else:
             return 0.
@@ -129,7 +129,7 @@ class LogController:
                 name.observe(debounce.debounced(0.1)(on_name_change), "value")
 
                 def on_start_change(change):
-                    log_item.start = time_helper.parse_time(change["new"])[0]
+                    log_item.start = time_helper.parse_time(change["new"])
                     update_duration()
                     update_summary_and_save()
 
@@ -149,7 +149,7 @@ class LogController:
                 last_button.on_click(on_last_click)
 
                 def on_end_change(change):
-                    log_item.end = time_helper.parse_time(change["new"])[0]
+                    log_item.end = time_helper.parse_time(change["new"])
                     update_duration()
                     update_summary_and_save()
 

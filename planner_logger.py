@@ -195,7 +195,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             if self.is_updating:
                 return
             
-            self.log_item.start = time_helper.parse_time(change["new"])[0]
+            self.log_item.start = time_helper.parse_time(change["new"])
             self.update()
             if self.log_item.is_in_list():
                 controller.update_link()
@@ -228,7 +228,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             if self.is_updating:
                 return
             
-            self.log_item.end = time_helper.parse_time(change["new"])[0]
+            self.log_item.end = time_helper.parse_time(change["new"])
             self.update()
             if self.log_item.is_in_list():
                 controller.update_link()
@@ -248,9 +248,12 @@ class PlannerLoggerItemBox(widgets.HBox):
         def on_upload_click(_):
             if controller.reference_controller is not None:
                 new_log = ContinuingLogItem(self.log_item.name, 
-                    time_helper.time_str(self.log_item.start),
-                    time_helper.time_str(self.log_item.end),
+                    "",
+                    "",
                     len(controller.reference_controller.logs), plan=None, is_continued=True)
+                new_log.start = self.log_item.start
+                new_log.end = self.log_item.end
+
                 controller.reference_controller.register_undo()
                 controller.reference_controller.logs.append(new_log)
                 controller.reference_controller.update(UpdateType.APPEND)
