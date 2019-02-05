@@ -453,10 +453,10 @@ class PlannerLoggerController:
         plus_button.on_click(on_plus_button_click)
 
         def on_clear_button_click(_):
-            # Save logs to previous_logs, keep recent 100 logs
+            # Save logs to previous_logs, keep recent 1000 logs
             self.logs.reverse()
             self.previous_logs = self.logs + self.previous_logs
-            self.previous_logs = self.previous_logs[0:100]
+            self.previous_logs = self.previous_logs[0:1000]
 
             self.register_undo()
             self.logs = []
