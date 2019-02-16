@@ -101,7 +101,7 @@ class PlannerLoggerItemBox(widgets.HBox):
         check_box = widgets.Checkbox(value=log_item.is_marked,
                                      layout=widgets.Layout(width="15px"),
                                      indent=False)
-        name_width = "180px"
+        name_width = "150px"
         name = widgets.Text(value=log_item.name, layout=widgets.Layout(width=name_width))
 
         continue_check = widgets.Checkbox(value=log_item.is_continued,
@@ -111,9 +111,9 @@ class PlannerLoggerItemBox(widgets.HBox):
         duration_label = widgets.Label(layout=widgets.Layout(width="70px"))
         time_diff_label = widgets.HTML(layout=widgets.Layout(width="70px"))
         first_duration = widgets.Text(value=log_item.plan.first_duration,
-            description="First:", layout=widgets.Layout(width="90px"), style=style)
+            description="First:", layout=widgets.Layout(width="100px"), style=style)
         last_duration = widgets.Text(value=log_item.plan.last_duration,
-            description="Last:", layout=widgets.Layout(width="90px"), style=style)
+            description="Last:", layout=widgets.Layout(width="100px"), style=style)
 
         spacing = widgets.HBox(layout=widgets.Layout(width="20px"))
 
