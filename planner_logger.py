@@ -30,19 +30,30 @@ class ContinuingLogItem(LogItem):
     def __init__(self, name: str, start_str: str, end_str: str,
                  index: int, plan: Optional[TwoStagePlanItem] = None,
                  is_continued: bool = False):
-        # Don't use the super's attribute is_marked, use plan's is_marked instead
-        super().__init__(name, start_str, end_str, is_marked=False)
+        self.plan: TwoStagePlanItem = plan if plan is not None else TwoStagePlanItem()
+
+        super().__init__(name, start_str, end_str, is_marked=self.plan.is_marked)
 
         self.index: int = index
         self.is_continued: bool = is_continued
         self.previous_log: Optional[ContinuingLogItem] = None
         self.next_log: Optional[ContinuingLogItem] = None
-        self.plan: TwoStagePlanItem = plan if plan is not None else TwoStagePlanItem()
+
         # Backup the plan when you set continuing, and recover the previous plan when you set uncontinuing.
         self.backup_plan: TwoStagePlanItem = self.plan
 
-    def duration(self) -> float:
-        return super().duration() + (0.0 if self.previous_log is None else self.previous_log.duration())
+    @property
+    def is_marked(self):
+        return self.plan.is_marked
+
+    @is_marked.setter
+    def is_marked(self, value):
+        """Directly setting plan.is_marked is preferred"""
+        self.plan.is_marked = value
+
+    def total_duration(self) -> float:
+        """The duration with all previous logs summed"""
+        return self.duration() + (0.0 if self.previous_log is None else self.previous_log.total_duration())
 
     def time_diffs(self) -> Tuple[Optional[float], Optional[float]]:
 
@@ -52,12 +63,12 @@ class ContinuingLogItem(LogItem):
         tail = self.tail()
 
         if tail.start is not None and tail.end is not None and last_duration is not None:
-            time_diff_last = last_duration - tail.duration()
+            time_diff_last = last_duration - tail.total_duration()
         else:
             time_diff_last = None
 
         if tail.start is not None and tail.end is not None and first_duration is not None:
-            time_diff_first = first_duration - tail.duration()
+            time_diff_first = first_duration - tail.total_duration()
         else:
             time_diff_first = None
 
@@ -291,7 +302,7 @@ class PlannerLoggerItemBox(widgets.HBox):
 
         self.is_updating = True
 
-        self.duration_label.value = time_helper.duration_str(self.log_item.duration())
+        self.duration_label.value = time_helper.duration_str(self.log_item.total_duration())
 
         self.first_duration.value = self.log_item.plan.first_duration
         self.last_duration.value = self.log_item.plan.last_duration
@@ -613,13 +624,13 @@ class PlannerLoggerController:
                     marked_plus += time_diff_last
                 else:
                     marked_minus += time_diff_last
-                marked_total += log.duration()
+                marked_total += log.total_duration()
             else:
                 if time_diff_last >= 0:
                     not_marked_plus += time_diff_last
                 else:
                     not_marked_minus += time_diff_last
-                not_marked_total += log.duration()
+                not_marked_total += log.total_duration()
 
         layout = widgets.Layout(width="90%", max_width="90%")
 
@@ -639,7 +650,7 @@ class PlannerLoggerController:
                     time_helper.duration_str(marked_total)),
                 layout=layout)
         
-        not_marked_title = widgets.Label(value="Not marked:",
+        not_marked_title = widgets.Label(value="Not Marked:",
             layout=layout)
 
         if self.show_plan_time:
@@ -655,7 +666,10 @@ class PlannerLoggerController:
                     time_helper.duration_str(not_marked_total)),
                 layout=layout)
 
-        self.summary_box.children = [marked_title, marked_summary, not_marked_title, not_marked_summary]
+        item_summary_title = widgets.Label(value="Total Time:", layout=layout)
+
+        self.summary_box.children = [marked_title, marked_summary, not_marked_title, not_marked_summary,
+                                     item_summary_title] + LogItem.item_htmls(self.logs, True)
 
         previous_bonus = time_helper.parse_duration(self.previous_bonus.value) or 0.0
         plan_time = time_helper.parse_duration(self.plan_time.value) or 0.0
@@ -683,6 +697,24 @@ class PlannerLoggerController:
             self.bonus.value = "Error: " + str(eval_error)
 
         self.save()
+
+    def item_summary_text(self) -> str:
+        title_duration_map = dict()
+        for log in self.logs:
+            # The text before a colon is considered a title
+            # Logs with the same title is merged together
+            title = log.name.split(":")[0]
+
+            time = title_duration_map.get(title, 0.0)
+            time += log.plain_duration()
+
+            title_duration_map[title] = time
+
+        summary_text = "Total Time:"
+        for title in sorted(title_duration_map.keys()):
+            summary_text += "\n" + title + ": " + time_helper.duration_str(title_duration_map[title])
+
+        return summary_text
 
     def save(self):
         if self.file is None:
