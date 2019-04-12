@@ -348,12 +348,14 @@ class PlannerLoggerController:
                  "logs", "plans", "container", "file", "suspend_summary_update", "suspend_link_update",
                  "previous_logs", 
                  "undo_stack", "redo_stack", "undo_button", "redo_button",
+                 "highlights_text",
                  "log_box", "summary_box", "bonus_formula", "plan_time", "previous_bonus", "bonus"]
 
     def __init__(self, file: Optional[str] = None, show_plan_time: bool = False, reference_controller: Optional["PlannerLoggerController"] = None):
         self.show_plan_time = show_plan_time
         _logs: List[ContinuingLogItem] = []
         _previous_logs: List[ContinuingLogItem] = []
+        _highlights = None
         _bonus_formula = None
         _plan_time = None
         _previous_bonus = None
@@ -405,6 +407,7 @@ class PlannerLoggerController:
                                 if log is not None:
                                     _previous_logs.append(log)
 
+                        _highlights = data["highlights"]
                         _bonus_formula = data["bonus_formula"]
                         _plan_time = data["plan_time"]
                         _previous_bonus = data["previous_bonus"]
@@ -425,6 +428,12 @@ class PlannerLoggerController:
         self.redo_button = widgets.Button(description="Redo")
         self.summary_box = widgets.VBox()
 
+        self.highlights_text = widgets.Text(
+            description="Highlights", layout=widgets.Layout(width="300px"),
+            style={"description_width": "initial"}
+        )
+        self.highlights_text.value = _highlights if _highlights is not None else ""
+
         default_formula_button = widgets.Button(description="Default formula")
 
         default_formula = "not_marked_total - plan_time + previous_bonus * 0.5 + not_marked_plus * 0.5"
@@ -441,10 +450,12 @@ class PlannerLoggerController:
 
         self.bonus = widgets.Label(layout=widgets.Layout(widht="150px"))
 
-        plan_time_summary_widgets = [default_formula_button, 
-            self.bonus_formula, self.plan_time, self.previous_bonus, self.bonus] if self.show_plan_time else []
+        plan_time_summary_widgets = [
+            default_formula_button, self.bonus_formula, self.plan_time, self.previous_bonus, self.bonus
+        ] if self.show_plan_time else []
         self.container = widgets.VBox(children=[self.log_box, plus_button, remove_marks_button, clear_button,
                                                 self.undo_button, self.redo_button,
+                                                self.highlights_text,
                                                 self.summary_box] + plan_time_summary_widgets)
 
         def on_remove_marks_click(_):
@@ -493,6 +504,11 @@ class PlannerLoggerController:
                 self.update(UpdateType.RESET)
 
         self.redo_button.on_click(on_redo_button_click)
+
+        def on_highlights_change(change):
+            self.update_summary_and_save()
+
+        self.highlights_text.observe(on_highlights_change, "value")
 
         def on_default_formula_click(_):
             self.bonus_formula.value = default_formula
@@ -668,8 +684,10 @@ class PlannerLoggerController:
 
         item_summary_title = widgets.Label(value="Total Time:", layout=layout)
 
+        highlights = [text.strip() for text in self.highlights_text.value.split(",")]
+
         self.summary_box.children = [marked_title, marked_summary, not_marked_title, not_marked_summary,
-                                     item_summary_title] + LogItem.item_htmls(self.logs, True)
+                                     item_summary_title] + LogItem.item_htmls(self.logs, True, highlights, "blue")
 
         previous_bonus = time_helper.parse_duration(self.previous_bonus.value) or 0.0
         plan_time = time_helper.parse_duration(self.plan_time.value) or 0.0
@@ -752,6 +770,7 @@ class PlannerLoggerController:
                 root = {
                     "logs": logs,
                     "previous_logs": previous_logs,
+                    "highlights": self.highlights_text.value,
                     "bonus_formula": self.bonus_formula.value,
                     "plan_time": self.plan_time.value,
                     "previous_bonus": self.previous_bonus.value,

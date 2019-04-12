@@ -26,7 +26,10 @@ class LogItem:
             return 0.
 
     @staticmethod
-    def item_htmls(logs: List["LogItem"], colon_indicate_title: bool):
+    def item_htmls(logs: List["LogItem"], colon_indicate_title: bool, highlights: Optional[List[str]] = None, highlight_color=None):
+        highlights = [text.lower() for text in highlights] if highlights is not None else []
+        highlight_color = "black" if highlight_color is None else highlight_color
+
         class MarkType(enum.Flag):
             HAS_ITEM_WITHOUT_MARK = enum.auto()
             HAS_ITEM_WITH_MARK = enum.auto()
@@ -64,8 +67,12 @@ class LogItem:
         def item_html(item: MergedItem) -> widgets.HTML:
             plain_text = item.name + " " + time_helper.duration_str(item.duration)
 
+            should_highlight = item.name.lower().strip() != "" and item.name.lower().strip() in highlights
+
             color: str
-            if item.mark_type is MarkType.HAS_ITEM_WITH_MARK | MarkType.HAS_ITEM_WITHOUT_MARK:
+            if should_highlight:
+                color = highlight_color
+            elif item.mark_type is MarkType.HAS_ITEM_WITH_MARK | MarkType.HAS_ITEM_WITHOUT_MARK:
                 color = "#804000"
             elif item.mark_type is MarkType.HAS_ITEM_WITH_MARK:
                 color = "#FF8000"
@@ -75,7 +82,10 @@ class LogItem:
                 color = "black"
                 assert False, "Unexpected mark_type {}".format(item.mark_type)
 
-            html_text = '<p style="color:{}">{}</p>'.format(color, plain_text)
+            if should_highlight:
+                html_text = '<p style="color:{}"><b>{}</b></p>'.format(color, plain_text)
+            else:
+                html_text = '<p style="color:{}">{}</p>'.format(color, plain_text)
 
             return widgets.HTML(value=html_text, layout=widgets.Layout(width="90%"))
 
