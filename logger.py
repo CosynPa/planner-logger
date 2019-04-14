@@ -39,6 +39,7 @@ class LogItem:
                 self.name = name
                 self.duration = duration
                 self.mark_type = mark_type
+                self.is_highlighted = False
 
         def should_merge(merged: MergedItem, item: LogItem):
             if colon_indicate_title:
@@ -64,13 +65,16 @@ class LogItem:
             else:
                 merged_items.append(MergedItem(merged_name(item), item.duration(), mark_type))
 
+        for merged in merged_items:
+            merged.is_highlighted = merged.name.lower().strip() != "" and merged.name.lower().strip() in highlights
+
+        merged_items.sort(key=lambda merged: merged.is_highlighted, reverse=True)
+
         def item_html(item: MergedItem) -> widgets.HTML:
             plain_text = item.name + " " + time_helper.duration_str(item.duration)
 
-            should_highlight = item.name.lower().strip() != "" and item.name.lower().strip() in highlights
-
             color: str
-            if should_highlight:
+            if item.is_highlighted:
                 color = highlight_color
             elif item.mark_type is MarkType.HAS_ITEM_WITH_MARK | MarkType.HAS_ITEM_WITHOUT_MARK:
                 color = "#804000"
@@ -82,7 +86,7 @@ class LogItem:
                 color = "black"
                 assert False, "Unexpected mark_type {}".format(item.mark_type)
 
-            if should_highlight:
+            if item.is_highlighted:
                 html_text = '<p style="color:{}"><b>{}</b></p>'.format(color, plain_text)
             else:
                 html_text = '<p style="color:{}">{}</p>'.format(color, plain_text)
