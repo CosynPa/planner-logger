@@ -2,7 +2,6 @@ import datetime
 from typing import List, Optional, Tuple
 import enum
 import json
-import weakref
 import copy
 
 import ipywidgets as widgets
@@ -122,10 +121,14 @@ class PlannerLoggerItemBox(widgets.HBox):
 
         duration_label = widgets.Label(layout=widgets.Layout(width="70px"))
         time_diff_label = widgets.HTML(layout=widgets.Layout(width="70px"))
-        first_duration = widgets.Text(value=log_item.plan.first_duration,
-            description="First:", layout=widgets.Layout(width="100px"), style=style)
-        last_duration = widgets.Text(value=log_item.plan.last_duration,
-            description="Last:", layout=widgets.Layout(width="100px"), style=style)
+        first_duration = widgets.Text(
+            value=log_item.plan.first_duration,
+            description="First:", layout=widgets.Layout(width="100px"), style=style
+        )
+        last_duration = widgets.Text(
+            value=log_item.plan.last_duration,
+            description="Last:", layout=widgets.Layout(width="100px"), style=style
+        )
 
         spacing = widgets.HBox(layout=widgets.Layout(width="20px"))
 
@@ -259,10 +262,12 @@ class PlannerLoggerItemBox(widgets.HBox):
 
         def on_upload_click(_):
             if controller.reference_controller is not None:
-                new_log = ContinuingLogItem(self.log_item.name, 
+                new_log = ContinuingLogItem(
+                    self.log_item.name,
                     "",
                     "",
-                    len(controller.reference_controller.logs), plan=None, is_continued=True)
+                    len(controller.reference_controller.logs), plan=None, is_continued=True
+                )
                 new_log.start = self.log_item.start
                 new_log.end = self.log_item.end
 
@@ -317,7 +322,7 @@ class PlannerLoggerItemBox(widgets.HBox):
 
         time_diff_first, time_diff_last = self.log_item.time_diffs()
 
-        if time_diff_first is not None and time_diff_first  >= 0:
+        if time_diff_first is not None and time_diff_first >= 0:
             color = "green"
         elif time_diff_last is not None and time_diff_last < 0:
             color = "red"
@@ -330,7 +335,8 @@ class PlannerLoggerItemBox(widgets.HBox):
             self_valid = self.log_item.start is not None and self.log_item.end is not None
             self.upload_button.disabled = not self_valid
 
-            any_match = self_valid and any(log.start == self.log_item.start and log.end == self.log_item.end
+            any_match = self_valid and any(
+                log.start == self.log_item.start and log.end == self.log_item.end
                 for log in reversed(self.controller.reference_controller.logs))
 
             self.uploaded_check.value = any_match
@@ -352,7 +358,8 @@ class PlannerLoggerController:
                  "break_text", "highlights_text",
                  "log_box", "summary_box", "bonus_formula", "plan_time", "previous_bonus", "bonus"]
 
-    def __init__(self, file: Optional[str] = None, show_plan_time: bool = False, reference_controller: Optional["PlannerLoggerController"] = None):
+    def __init__(self, file: Optional[str] = None, show_plan_time: bool = False,
+                 reference_controller: Optional["PlannerLoggerController"] = None):
         self.show_plan_time = show_plan_time
         _logs: List[ContinuingLogItem] = []
         _previous_logs: List[ContinuingLogItem] = []
@@ -415,7 +422,6 @@ class PlannerLoggerController:
                         _plan_time = data["plan_time"]
                         _previous_bonus = data["previous_bonus"]
 
-
             except (OSError, json.JSONDecodeError, KeyError):
                 pass
 
@@ -456,7 +462,8 @@ class PlannerLoggerController:
         self.plan_time = widgets.Text(description="Plan time", layout=widgets.Layout(widht="120px"), style=style)
         self.plan_time.value = _plan_time if _plan_time is not None else ""
 
-        self.previous_bonus = widgets.Text(description="Previous bonus", layout=widgets.Layout(widht="120px"), style=style)
+        self.previous_bonus = widgets.Text(description="Previous bonus", layout=widgets.Layout(widht="120px"),
+                                           style=style)
         self.previous_bonus.value = _previous_bonus if _previous_bonus is not None else ""
 
         self.bonus = widgets.Label(layout=widgets.Layout(widht="150px"))
@@ -542,7 +549,7 @@ class PlannerLoggerController:
 
         break_button.on_click(on_break_button_click)
 
-        def on_highlights_change(change):
+        def on_highlights_change(_):
             self.update_summary_and_save()
 
         self.highlights_text.observe(on_highlights_change, "value")
@@ -552,7 +559,7 @@ class PlannerLoggerController:
 
         default_formula_button.on_click(on_default_formula_click)
 
-        def on_bonus_related_change(change):
+        def on_bonus_related_change(_):
             self.update_summary_and_save()
 
         self.bonus_formula.observe(on_bonus_related_change, "value")
@@ -587,7 +594,8 @@ class PlannerLoggerController:
         elif update_type is UpdateType.RESET:
             old = self.log_box.children
 
-            self.log_box.children = [PlannerLoggerItemBox(log_item, self, self.show_plan_time, self.reference_controller is not None)
+            self.log_box.children = [PlannerLoggerItemBox(log_item, self, self.show_plan_time,
+                                                          self.reference_controller is not None)
                                      for log_item in self.logs]
 
             for box in old:
@@ -596,8 +604,8 @@ class PlannerLoggerController:
                 box.close()
         elif update_type is UpdateType.REMOVE_MARKS:
             self.suspend_summary_update = True  # Avoid trigger summary update each time for every check box
-            for iterm_box in self.log_box.children:
-                iterm_box.check_box.value = False
+            for item_box in self.log_box.children:
+                item_box.check_box.value = False
             self.suspend_summary_update = False
         else:
             assert False, "Unexpected update type"
@@ -639,13 +647,12 @@ class PlannerLoggerController:
                         log.plan.is_marked = same_name_logs[-1].plan.is_marked
                     else:
                         same_name_logs_in_previous = [a_log for a_log in 
-                                self.previous_logs if a_log.name == log.name]
+                                                      self.previous_logs if a_log.name == log.name]
                         if same_name_logs_in_previous:
                             log.plan.is_marked = same_name_logs_in_previous[0].plan.is_marked
                         else:
                             log.plan.is_marked = False
-                
-            
+
         # should update after linked list structure is completely constructed
         for box in self.log_box.children:
             box.update()
@@ -688,7 +695,7 @@ class PlannerLoggerController:
         layout = widgets.Layout(width="90%", max_width="90%")
 
         marked_title = widgets.Label(value="Marked:",
-            layout=layout)
+                                     layout=layout)
 
         if self.show_plan_time:
             marked_summary = widgets.Label(
@@ -704,7 +711,7 @@ class PlannerLoggerController:
                 layout=layout)
         
         not_marked_title = widgets.Label(value="Not Marked:",
-            layout=layout)
+                                         layout=layout)
 
         if self.show_plan_time:
             not_marked_summary = widgets.Label(
@@ -741,7 +748,7 @@ class PlannerLoggerController:
                 "not_marked_minus": not_marked_minus,
                 "not_marked_total": not_marked_total,
             }
-            bonus_duration = eval(self.bonus_formula.value, {'__builtins__':{}}, local_dic)
+            bonus_duration = eval(self.bonus_formula.value, {'__builtins__': {}}, local_dic)
         except BaseException as error:
             eval_error = error
             bonus_duration = 0.0
@@ -752,24 +759,6 @@ class PlannerLoggerController:
             self.bonus.value = "Error: " + str(eval_error)
 
         self.save()
-
-    def item_summary_text(self) -> str:
-        title_duration_map = dict()
-        for log in self.logs:
-            # The text before a colon is considered a title
-            # Logs with the same title is merged together
-            title = log.name.split(":")[0]
-
-            time = title_duration_map.get(title, 0.0)
-            time += log.plain_duration()
-
-            title_duration_map[title] = time
-
-        summary_text = "Total Time:"
-        for title in sorted(title_duration_map.keys()):
-            summary_text += "\n" + title + ": " + time_helper.duration_str(title_duration_map[title])
-
-        return summary_text
 
     def save(self):
         if self.file is None:
