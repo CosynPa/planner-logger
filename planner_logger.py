@@ -13,6 +13,7 @@ import debounce
 
 from IPython.core.debugger import set_trace
 
+
 class TwoStagePlanItem:
     __slots__ = ["first_duration", "last_duration", "is_marked", "is_mark_set"]
 
@@ -348,7 +349,7 @@ class PlannerLoggerController:
                  "logs", "plans", "container", "file", "suspend_summary_update", "suspend_link_update",
                  "previous_logs", 
                  "undo_stack", "redo_stack", "undo_button", "redo_button",
-                 "highlights_text",
+                 "break_text", "highlights_text",
                  "log_box", "summary_box", "bonus_formula", "plan_time", "previous_bonus", "bonus"]
 
     def __init__(self, file: Optional[str] = None, show_plan_time: bool = False, reference_controller: Optional["PlannerLoggerController"] = None):
@@ -359,6 +360,7 @@ class PlannerLoggerController:
         _bonus_formula = None
         _plan_time = None
         _previous_bonus = None
+        _break_title = None
         self.file = file
         self.reference_controller = reference_controller
         if file is not None:
@@ -384,7 +386,7 @@ class PlannerLoggerController:
                                 first_duration = plan_dic["first_duration"]
                                 last_duration = plan_dic["last_duration"]
                                 is_marked = plan_dic["is_marked"]
-                                is_mark_set = plan_dic.get("is_mark_set", False)
+                                is_mark_set = plan_dic["is_mark_set"]
                                 plan = TwoStagePlanItem(first_duration, last_duration, is_marked, is_mark_set)
                                 log = ContinuingLogItem(name, start_str, end_str, index, plan, is_continued)
 
@@ -400,17 +402,19 @@ class PlannerLoggerController:
                                 if log is not None:
                                     _logs.append(log)
 
-                        previous_logs = data.get("previous_logs")
+                        previous_logs = data["previous_logs"]
                         if isinstance(previous_logs, list):
                             for dic in previous_logs:
                                 log = parse_log(dic)
                                 if log is not None:
                                     _previous_logs.append(log)
 
+                        _break_title = data["break_title"]
                         _highlights = data["highlights"]
                         _bonus_formula = data["bonus_formula"]
                         _plan_time = data["plan_time"]
                         _previous_bonus = data["previous_bonus"]
+
 
             except (OSError, json.JSONDecodeError, KeyError):
                 pass
@@ -426,7 +430,14 @@ class PlannerLoggerController:
         clear_button = widgets.Button(description="Clear")
         self.undo_button = widgets.Button(description="Undo")
         self.redo_button = widgets.Button(description="Redo")
+        break_button = widgets.Button(description="Took a Break")
+        self.break_text = widgets.Text(
+            description="Break Title:", layout=widgets.Layout(width="300px"),
+            style={"description_width": "initial"}
+        )
         self.summary_box = widgets.VBox()
+
+        self.break_text.value = _break_title if _break_title is not None else ""
 
         self.highlights_text = widgets.Text(
             description="Highlights", layout=widgets.Layout(width="300px"),
@@ -455,6 +466,7 @@ class PlannerLoggerController:
         ] if self.show_plan_time else []
         self.container = widgets.VBox(children=[self.log_box, plus_button, remove_marks_button, clear_button,
                                                 self.undo_button, self.redo_button,
+                                                break_button, self.break_text,
                                                 self.highlights_text,
                                                 self.summary_box] + plan_time_summary_widgets)
 
@@ -504,6 +516,31 @@ class PlannerLoggerController:
                 self.update(UpdateType.RESET)
 
         self.redo_button.on_click(on_redo_button_click)
+
+        def on_break_button_click(_):
+            if len(self.logs) > 0:
+                self.register_undo()
+
+                last_log: ContinuingLogItem = self.logs[-1]
+                now_str = time_helper.time_str(datetime.datetime.now())
+                break_log = ContinuingLogItem(name=self.break_text.value,
+                                              start_str=time_helper.time_str(last_log.end),
+                                              end_str=now_str,
+                                              index=len(self.logs)
+                                              )
+                next_log = ContinuingLogItem(name=last_log.name,
+                                             start_str=now_str,
+                                             end_str="",
+                                             index=len(self.logs) + 1,
+                                             is_continued=True
+                                             )
+
+                self.logs.append(break_log)
+                self.update(UpdateType.APPEND)
+                self.logs.append(next_log)
+                self.update(UpdateType.APPEND)
+
+        break_button.on_click(on_break_button_click)
 
         def on_highlights_change(change):
             self.update_summary_and_save()
@@ -770,6 +807,7 @@ class PlannerLoggerController:
                 root = {
                     "logs": logs,
                     "previous_logs": previous_logs,
+                    "break_title": self.break_text.value,
                     "highlights": self.highlights_text.value,
                     "bonus_formula": self.bonus_formula.value,
                     "plan_time": self.plan_time.value,
