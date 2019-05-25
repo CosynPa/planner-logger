@@ -18,6 +18,22 @@ class LogItem:
         self.end: Optional[datetime.time] = time_helper.parse_time(end_str)
         self.is_marked: bool = is_marked
 
+    @property
+    def start_str(self) -> str:
+        return time_helper.time_str(self.start)
+
+    @start_str.setter
+    def start_str(self, value: str):
+        self.start = time_helper.parse_time(value)
+
+    @property
+    def end_str(self) -> str:
+        return time_helper.time_str(self.end)
+
+    @end_str.setter
+    def end_str(self, value: str):
+        self.end = time_helper.parse_time(value)
+
     def duration(self) -> float:
         if self.start is not None and self.end is not None:
             duration = time_helper.time_diff(self.end, self.start)
@@ -167,10 +183,10 @@ class LogController:
                                              indent=False)
                 name = widgets.Text(value=log_item.name)
 
-                start_text = time_helper.time_str(log_item.start)
+                start_text = log_item.start_str
                 start = widgets.Text(value=start_text, description="Start:", layout=widgets.Layout(width="30%"))
 
-                end_text = time_helper.time_str(log_item.end)
+                end_text = log_item.end_str
                 end = widgets.Text(value=end_text, description="End:", layout=widgets.Layout(width="30%"))
 
                 start_now = widgets.Button(description="Now", layout=widgets.Layout(width="70px"))
@@ -199,7 +215,7 @@ class LogController:
                 name.observe(debounce.debounced(0.1)(on_name_change), "value")
 
                 def on_start_change(change):
-                    log_item.start = time_helper.parse_time(change["new"])
+                    log_item.start_str = change["new"]
                     update_duration()
                     update_summary_and_save()
 
@@ -212,14 +228,14 @@ class LogController:
 
                 def on_last_click(_):
                     if index >= 1:
-                        last_end = self.logs[index - 1].end
-                        if last_end is not None:
-                            start.value = time_helper.time_str(last_end)
+                        last_end = self.logs[index - 1].end_str
+                        if last_end != "":
+                            start.value = last_end
 
                 last_button.on_click(on_last_click)
 
                 def on_end_change(change):
-                    log_item.end = time_helper.parse_time(change["new"])
+                    log_item.end_str = change["new"]
                     update_duration()
                     update_summary_and_save()
 
@@ -288,8 +304,8 @@ class LogController:
                 for log in self.logs:
                     dic = {
                         "name": log.name,
-                        "start_str": time_helper.time_str(log.start),
-                        "end_str": time_helper.time_str(log.end),
+                        "start_str": log.start_str,
+                        "end_str": log.end_str,
                         "is_marked": log.is_marked
                     }
 

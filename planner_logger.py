@@ -129,10 +129,10 @@ class PlannerLoggerItemBox(widgets.HBox):
 
         spacing = widgets.HBox(layout=widgets.Layout(width="20px"))
 
-        start_text = time_helper.time_str(log_item.start)
+        start_text = log_item.start_str
         start = widgets.Text(value=start_text, description="Start:", layout=widgets.Layout(width="100px"), style=style)
 
-        end_text = time_helper.time_str(log_item.end)
+        end_text = log_item.end_str
         end = widgets.Text(value=end_text, description="End:", layout=widgets.Layout(width="100px"), style=style)
 
         start_now = widgets.Button(description="Now", layout=widgets.Layout(width="auto"))
@@ -207,7 +207,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             if self.is_updating:
                 return
             
-            self.log_item.start = time_helper.parse_time(change["new"])
+            self.log_item.start_str = change["new"]
             self.update()
             if self.log_item.is_in_list():
                 controller.update_link()
@@ -229,10 +229,10 @@ class PlannerLoggerItemBox(widgets.HBox):
                 return
             
             if self.log_item.index >= 1:
-                last_end = controller.logs[self.log_item.index - 1].end
-                if last_end is not None:
+                last_end = controller.logs[self.log_item.index - 1].end_str
+                if last_end != "":
                     controller.register_undo()
-                    start.value = time_helper.time_str(last_end)
+                    start.value = last_end
 
         last_button.on_click(on_last_click)
 
@@ -240,7 +240,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             if self.is_updating:
                 return
             
-            self.log_item.end = time_helper.parse_time(change["new"])
+            self.log_item.end_str = change["new"]
             self.update()
             if self.log_item.is_in_list():
                 controller.update_link()
@@ -524,7 +524,7 @@ class PlannerLoggerController:
                 last_log: ContinuingLogItem = self.logs[-1]
                 now_str = time_helper.time_str(datetime.datetime.now())
                 break_log = ContinuingLogItem(name=self.break_text.value,
-                                              start_str=time_helper.time_str(last_log.end),
+                                              start_str=last_log.end_str,
                                               end_str=now_str,
                                               index=len(self.logs)
                                               )
@@ -787,8 +787,8 @@ class PlannerLoggerController:
 
                     dic = {
                         "name": log.name,
-                        "start_str": time_helper.time_str(log.start),
-                        "end_str": time_helper.time_str(log.end),
+                        "start_str": log.start_str,
+                        "end_str": log.end_str,
                         "index": log.index,
                         "is_continued": log.is_continued,
                         "plan": plan_dic,
