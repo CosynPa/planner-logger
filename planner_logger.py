@@ -488,7 +488,10 @@ class PlannerLoggerController:
 
         def on_plus_button_click(_):
             self.register_undo()
-            self.logs.append(ContinuingLogItem("", "", "", len(self.logs)))
+
+            start_str = self.logs[-1].end_str if self.logs else ""
+            self.logs.append(ContinuingLogItem("", start_str, "", len(self.logs)))
+
             self.update(UpdateType.APPEND)
 
         plus_button.on_click(on_plus_button_click)
