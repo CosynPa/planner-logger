@@ -355,7 +355,7 @@ class PlannerLoggerController:
                  "logs", "plans", "container", "file", "suspend_summary_update", "suspend_link_update",
                  "previous_logs", 
                  "undo_stack", "redo_stack", "undo_button", "redo_button",
-                 "break_text", "highlights_text",
+                 "continue_after_break_check", "break_text", "highlights_text",
                  "log_box", "summary_box", "bonus_formula", "plan_time", "previous_bonus", "bonus"]
 
     def __init__(self, file: Optional[str] = None, show_plan_time: bool = False,
@@ -416,6 +416,7 @@ class PlannerLoggerController:
                                 if log is not None:
                                     _previous_logs.append(log)
 
+                        _continue_after_break = data["continue_after_break"]
                         _break_title = data["break_title"]
                         _highlights = data["highlights"]
                         _bonus_formula = data["bonus_formula"]
@@ -437,6 +438,9 @@ class PlannerLoggerController:
         self.undo_button = widgets.Button(description="Undo")
         self.redo_button = widgets.Button(description="Redo")
         break_button = widgets.Button(description="Took a Break")
+        self.continue_after_break_check = widgets.Checkbox(value=_continue_after_break,
+                                                           description="Continue After Break",
+                                                           indent=False)
         self.break_text = widgets.Text(
             description="Break Title:", layout=widgets.Layout(width="300px"),
             style={"description_width": "initial"}
@@ -473,7 +477,7 @@ class PlannerLoggerController:
         ] if self.show_plan_time else []
         self.container = widgets.VBox(children=[self.log_box, plus_button, remove_marks_button, clear_button,
                                                 self.undo_button, self.redo_button,
-                                                break_button, self.break_text,
+                                                break_button, self.continue_after_break_check, self.break_text,
                                                 self.highlights_text,
                                                 self.summary_box] + plan_time_summary_widgets)
 
@@ -527,6 +531,11 @@ class PlannerLoggerController:
 
         self.redo_button.on_click(on_redo_button_click)
 
+        def on_continue_after_break_change(_):
+            self.save()
+
+        self.continue_after_break_check.observe(on_continue_after_break_change)
+
         def on_break_button_click(_):
             if len(self.logs) > 0:
                 self.register_undo()
@@ -542,7 +551,7 @@ class PlannerLoggerController:
                                              start_str=now_str,
                                              end_str="",
                                              index=len(self.logs) + 1,
-                                             is_continued=True
+                                             is_continued=self.continue_after_break_check.value
                                              )
 
                 self.logs.append(break_log)
@@ -799,6 +808,7 @@ class PlannerLoggerController:
                 root = {
                     "logs": logs,
                     "previous_logs": previous_logs,
+                    "continue_after_break": self.continue_after_break_check.value,
                     "break_title": self.break_text.value,
                     "highlights": self.highlights_text.value,
                     "bonus_formula": self.bonus_formula.value,
