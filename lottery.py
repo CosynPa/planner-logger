@@ -1,6 +1,8 @@
-from time_helper import parse_duration
+import datetime
 from dataclasses import dataclass
 import random
+
+from time_helper import parse_duration, time_str
 
 
 @dataclass
@@ -63,6 +65,8 @@ def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, s
     else:
         p = expected_winning / winning_duration
         win = random.random() < p
+
+    print(time_str(datetime.datetime.now()))
 
     if win:
         print("CONGRATULATIONS! YOU WIN!")
