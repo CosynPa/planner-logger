@@ -65,9 +65,9 @@ def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, s
         win = random.random() < p
 
     if win:
-        return "CONGRATULATIONS! YOU WIN!"
+        print("CONGRATULATIONS! YOU WIN!")
     else:
-        return random.choice([
+        sentence = random.choice([
             "Cheer up!",
             "Fantastic!",
             "Good for you!",
@@ -94,3 +94,4 @@ def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, s
             "You’re getting better and better!",
             "You’re getting better every day!",
         ])
+        print(sentence)
