@@ -2,7 +2,7 @@ import datetime
 from dataclasses import dataclass
 import random
 
-from time_helper import parse_duration, time_str
+from time_helper import parse_duration, time_str, duration_str
 
 
 @dataclass
@@ -19,11 +19,22 @@ class LotterySetting:
     # The expected total winning time when the `total_time` of tasks are completed, such as 1800
     expected_total_win: float
 
+    # The time that is accumulated for later lottery, used to reduce the variance, such as 0.5.
+    # 0.0 means vanilla geometric distribution.
+    # The value should be greater than or equal to 0.0 and less than or equal to 1.0
+    accumulate_later_ratio: float
+
+
+@dataclass
+class LotteryContext:
+    accumulated_time: float = 0.0
+
 
 random.seed()
 
 
-def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, setting: LotterySetting) -> str:
+def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str,
+                 setting: LotterySetting, context: LotteryContext):
     """Draw the lottery
 
     When you complete a task, you can use this lottery game to reward you some extra time.
@@ -57,14 +68,22 @@ def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, s
         duration += (second_plan_duration - first_plan_duration) * setting.second_plan_bonus
         duration += (first_plan_duration - actual_duration) * setting.first_plan_bonus
 
+    # The mathematical expectation of the winning time
     expected_winning = duration * setting.expected_total_win / setting.total_time
 
+    accumulate_later = expected_winning * setting.accumulate_later_ratio
+
     win: bool
-    if winning_duration < expected_winning:
-        win = True
-    else:
-        p = expected_winning / winning_duration
+    if context.accumulated_time + expected_winning < winning_duration:
+        p = (expected_winning - accumulate_later) / (winning_duration - context.accumulated_time - accumulate_later)
         win = random.random() < p
+        if win:
+            context.accumulated_time = 0
+        else:
+            context.accumulated_time += accumulate_later
+    else:
+        win = True
+        context.accumulated_time = context.accumulated_time + expected_winning - winning_duration
 
     print(time_str(datetime.datetime.now()))
 
@@ -99,3 +118,6 @@ def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, s
             "You’re getting better every day!",
         ])
         print(sentence)
+
+    if context.accumulated_time > 0:
+        print(f"(Accumulated for next {duration_str(context.accumulated_time)})")
