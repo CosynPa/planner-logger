@@ -363,6 +363,7 @@ class PlannerLoggerController:
         self.show_plan_time = show_plan_time
         _logs: List[ContinuingLogItem] = []
         _previous_logs: List[ContinuingLogItem] = []
+        _continue_after_break = True
         _highlights = None
         _bonus_formula = None
         _plan_time = None
@@ -417,11 +418,11 @@ class PlannerLoggerController:
                                     _previous_logs.append(log)
 
                         _continue_after_break = data["continue_after_break"]
-                        _break_title = data["break_title"]
                         _highlights = data["highlights"]
                         _bonus_formula = data["bonus_formula"]
                         _plan_time = data["plan_time"]
                         _previous_bonus = data["previous_bonus"]
+                        _break_title = data["break_title"]
 
             except (OSError, json.JSONDecodeError, KeyError):
                 pass
