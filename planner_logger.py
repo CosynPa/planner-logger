@@ -356,7 +356,7 @@ class PlannerLoggerController:
                  "previous_logs", 
                  "undo_stack", "redo_stack", "undo_button", "redo_button",
                  "continue_after_break_check", "break_text", "highlights_text",
-                 "log_box", "summary_box", "bonus_formula", "plan_time", "previous_bonus", "bonus"]
+                 "log_box", "summary_box",]
 
     def __init__(self, file: Optional[str] = None, show_plan_time: bool = False,
                  reference_controller: Optional["PlannerLoggerController"] = None):
@@ -365,9 +365,6 @@ class PlannerLoggerController:
         _previous_logs: List[ContinuingLogItem] = []
         _continue_after_break = True
         _highlights = None
-        _bonus_formula = None
-        _plan_time = None
-        _previous_bonus = None
         _break_title = None
         self.file = file
         self.reference_controller = reference_controller
@@ -419,9 +416,6 @@ class PlannerLoggerController:
 
                         _continue_after_break = data["continue_after_break"]
                         _highlights = data["highlights"]
-                        _bonus_formula = data["bonus_formula"]
-                        _plan_time = data["plan_time"]
-                        _previous_bonus = data["previous_bonus"]
                         _break_title = data["break_title"]
 
             except (OSError, json.JSONDecodeError, KeyError):
@@ -456,31 +450,11 @@ class PlannerLoggerController:
         )
         self.highlights_text.value = _highlights if _highlights is not None else ""
 
-        default_formula_button = widgets.Button(description="Default formula")
-
-        default_formula = "not_marked_total - plan_time + previous_bonus * 0.5 + not_marked_plus * 0.5"
-
-        style = {"description_width": "100px"}
-        self.bonus_formula = widgets.Text(description="Bonus formula", layout=widgets.Layout(width="90%"), style=style)
-        self.bonus_formula.value = _bonus_formula if _bonus_formula is not None else default_formula
-
-        self.plan_time = widgets.Text(description="Plan time", layout=widgets.Layout(widht="120px"), style=style)
-        self.plan_time.value = _plan_time if _plan_time is not None else ""
-
-        self.previous_bonus = widgets.Text(description="Previous bonus", layout=widgets.Layout(widht="120px"),
-                                           style=style)
-        self.previous_bonus.value = _previous_bonus if _previous_bonus is not None else ""
-
-        self.bonus = widgets.Label(layout=widgets.Layout(widht="150px"))
-
-        plan_time_summary_widgets = [
-            default_formula_button, self.bonus_formula, self.plan_time, self.previous_bonus, self.bonus
-        ] if self.show_plan_time else []
         self.container = widgets.VBox(children=[self.log_box, plus_button, remove_marks_button, clear_button,
                                                 self.undo_button, self.redo_button,
                                                 break_button, self.continue_after_break_check, self.break_text,
                                                 self.highlights_text,
-                                                self.summary_box] + plan_time_summary_widgets)
+                                                self.summary_box])
 
         def on_remove_marks_click(_):
             self.register_undo()
@@ -566,18 +540,6 @@ class PlannerLoggerController:
             self.update_summary_and_save()
 
         self.highlights_text.observe(on_highlights_change, "value")
-
-        def on_default_formula_click(_):
-            self.bonus_formula.value = default_formula
-
-        default_formula_button.on_click(on_default_formula_click)
-
-        def on_bonus_related_change(_):
-            self.update_summary_and_save()
-
-        self.bonus_formula.observe(on_bonus_related_change, "value")
-        self.plan_time.observe(on_bonus_related_change, "value")
-        self.previous_bonus.observe(on_bonus_related_change, "value")
 
         self.suspend_summary_update = False
         self.suspend_link_update = False
@@ -746,31 +708,6 @@ class PlannerLoggerController:
         self.summary_box.children = [marked_title, marked_summary, not_marked_title, not_marked_summary,
                                      item_summary_title] + LogItem.item_htmls(self.logs, True, highlights, "blue")
 
-        previous_bonus = time_helper.parse_duration(self.previous_bonus.value) or 0.0
-        plan_time = time_helper.parse_duration(self.plan_time.value) or 0.0
-
-        eval_error = None
-        try:
-            local_dic = {
-                "plan_time": plan_time,
-                "previous_bonus": previous_bonus,
-                "marked_plus": marked_plus,
-                "marked_minus": marked_minus,
-                "marked_total": marked_total,
-                "not_marked_plus": not_marked_plus,
-                "not_marked_minus": not_marked_minus,
-                "not_marked_total": not_marked_total,
-            }
-            bonus_duration = eval(self.bonus_formula.value, {'__builtins__': {}}, local_dic)
-        except BaseException as error:
-            eval_error = error
-            bonus_duration = 0.0
-
-        if eval_error is None:
-            self.bonus.value = "Bonus: {}".format(time_helper.duration_str(bonus_duration))
-        else:
-            self.bonus.value = "Error: " + str(eval_error)
-
         self.save()
 
     def save(self):
@@ -812,9 +749,6 @@ class PlannerLoggerController:
                     "continue_after_break": self.continue_after_break_check.value,
                     "break_title": self.break_text.value,
                     "highlights": self.highlights_text.value,
-                    "bonus_formula": self.bonus_formula.value,
-                    "plan_time": self.plan_time.value,
-                    "previous_bonus": self.previous_bonus.value,
                 }
                 json.dump(root, f)
         except OSError:
