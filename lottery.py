@@ -33,7 +33,7 @@ class LotteryContext:
 random.seed()
 
 
-def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str,
+def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, store: bool,
                  setting: LotterySetting, context: LotteryContext):
     """Draw the lottery
 
@@ -43,6 +43,7 @@ def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str,
     :param first_plan: the first plan time of the task that you've just finished
     :param second_plan: the second plan time of the task
     :param winning: the time you get when you win the lottery
+    :param store: whether save the time for next draw
     :param setting:
     :return: When win, returns "You win!!!" otherwise some random encouraging sentences.
     """
@@ -71,19 +72,24 @@ def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str,
     # The mathematical expectation of the winning time
     expected_winning = duration * setting.expected_total_win / setting.total_time
 
-    accumulate_later = expected_winning * setting.accumulate_later_ratio
-
     win: bool
-    if context.accumulated_time + expected_winning < winning_duration:
-        p = (expected_winning - accumulate_later) / (winning_duration - context.accumulated_time - accumulate_later)
-        win = random.random() < p
-        if win:
-            context.accumulated_time = 0
-        else:
-            context.accumulated_time += accumulate_later
+
+    if store:
+        win = False
+        context.accumulated_time += expected_winning
     else:
-        win = True
-        context.accumulated_time = context.accumulated_time + expected_winning - winning_duration
+        accumulate_later = expected_winning * setting.accumulate_later_ratio
+
+        if context.accumulated_time + expected_winning < winning_duration:
+            p = (expected_winning - accumulate_later) / (winning_duration - context.accumulated_time - accumulate_later)
+            win = random.random() < p
+            if win:
+                context.accumulated_time = 0
+            else:
+                context.accumulated_time += accumulate_later
+        else:
+            win = True
+            context.accumulated_time = context.accumulated_time + expected_winning - winning_duration
 
     print(time_str(datetime.datetime.now()))
 
