@@ -12,7 +12,7 @@ class TimeType(Flag):
 
 def parse_duration(time_string: str) -> Optional[float]:
     """
-    Parse duration such as "2h30m". If parse failed, returns None. "0" is parsed as 0.
+    Parse duration such as "2h30m". If parse failed, returns None. "0" is parsed as 0. "5" is parsed as 5 minutes.
     """
 
     if len(time_string) >= 1 and time_string[0] == "-":
@@ -44,7 +44,7 @@ def parse_duration(time_string: str) -> Optional[float]:
 
     minutes = hours[-1].split("m")
     minute_number: Optional[float]
-    if len(minutes) == 2:
+    if len(minutes) == 1 or len(minutes) == 2:  # When no "m" suffix, it's considered minute
         try:
             minute_number = float(minutes[0])
         except ValueError:
@@ -53,10 +53,7 @@ def parse_duration(time_string: str) -> Optional[float]:
         minute_number = None
 
     if day_number is None and hour_number is None and minute_number is None:
-        if positive_part == "0":
-            return 0.
-        else:
-            return None
+        return None
     else:
         return sign * ((day_number or 0.) * 86400. + (hour_number or 0.) * 3600. + (minute_number or 0.) * 60.)
 
@@ -72,11 +69,11 @@ def duration_str(seconds: float) -> str:
         minutes, left = divmod(left, 60)
 
         if days != 0:
-            return "{day:d}d{hour:d}h{minute:d}m".format(day=int(days), hour=int(hours), minute=int(minutes))
+            return "{day:d}d{hour:d}h{minute:d}".format(day=int(days), hour=int(hours), minute=int(minutes))
         elif hours != 0:
-            return "{hour:d}h{minute:d}m".format(hour=int(hours), minute=int(minutes))
+            return "{hour:d}h{minute:d}".format(hour=int(hours), minute=int(minutes))
         else:
-            return "{minute:d}m".format(minute=int(minutes))
+            return "{minute:d}".format(minute=int(minutes))
 
     if seconds >= 0:
         return positive_time(seconds)
