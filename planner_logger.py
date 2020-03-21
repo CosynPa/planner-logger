@@ -25,7 +25,7 @@ class TwoStagePlanItem:
 
 
 class ContinuingLogItem(LogItem):
-    __slots__ = ["index", "is_continued", "previous_log", "next_log", "plan", "backup_plan"]
+    __slots__ = ["index", "_is_continued", "previous_log", "next_log", "plan", "backup_plan"]
 
     def __init__(self, name: str, start_str: str, end_str: str,
                  index: int, plan: Optional[TwoStagePlanItem] = None,
@@ -35,7 +35,7 @@ class ContinuingLogItem(LogItem):
         super().__init__(name, start_str, end_str, is_marked=self.plan.is_marked)
 
         self.index: int = index
-        self.is_continued: bool = is_continued
+        self._is_continued: bool = is_continued
         self.previous_log: Optional[ContinuingLogItem] = None
         self.next_log: Optional[ContinuingLogItem] = None
 
@@ -50,6 +50,20 @@ class ContinuingLogItem(LogItem):
     def is_marked(self, value):
         """Directly setting plan.is_marked is preferred"""
         self.plan.is_marked = value
+
+    @property
+    def is_continued(self) -> bool:
+        return self._is_continued
+
+    @is_continued.setter
+    def is_continued(self, new_value: bool):
+        old_value = self._is_continued
+        self._is_continued = new_value
+
+        if old_value is False and new_value is True:
+            self.backup_plan = copy.copy(self.plan)
+        elif old_value is True and new_value is False:
+            self.plan = copy.copy(self.backup_plan)
 
     def total_duration(self) -> float:
         """The duration with all previous logs summed"""
@@ -612,11 +626,9 @@ class PlannerLoggerController:
             same_name_logs = [a_log for a_log in self.logs[0:index] if a_log.name == log.name]
             if same_name_logs and log.is_continued:
                 log.insert_to_linked_list(after_item=same_name_logs[-1])
-                log.backup_plan = copy.copy(log.plan)
                 log.plan = same_name_logs[-1].plan    
             else:
                 log.is_continued = False
-                log.plan = log.backup_plan
                 if not log.plan.is_mark_set:
                     if same_name_logs:
                         log.plan.is_marked = same_name_logs[-1].plan.is_marked
