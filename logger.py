@@ -87,7 +87,7 @@ class LogItem:
         merged_items.sort(key=lambda merged: merged.is_highlighted, reverse=True)
 
         def item_html(item: MergedItem) -> widgets.HTML:
-            plain_text = item.name + " " + time_helper.duration_str(item.duration)
+            plain_text = item.name + ": " + time_helper.duration_str(item.duration)
 
             color: str
             if item.is_highlighted:
