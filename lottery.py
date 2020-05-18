@@ -58,6 +58,7 @@ def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, s
     assert winning_duration is not None, f"Unexpected `winning` time {winning_duration}"
 
     assert first_plan_duration <= second_plan_duration, "First plan time should be less than second plan time."
+    assert 0.0 <= setting.accumulate_later_ratio <= 1.0
 
     duration = second_plan_duration
 
