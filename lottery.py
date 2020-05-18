@@ -126,5 +126,5 @@ def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, s
         ])
         print(sentence)
 
-    if context.accumulated_time > 0:
+    if not win or context.accumulated_time != 0:
         print(f"(Accumulated for next {duration_str(context.accumulated_time)})")
