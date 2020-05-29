@@ -337,7 +337,7 @@ class PlannerLoggerItemBox(widgets.HBox):
         time_diff_first, time_diff_last = self.log_item.time_diffs()
 
         if time_diff_first is not None and time_diff_first >= 0:
-            color = "green"
+            color = "#00d000"
         elif time_diff_last is not None and time_diff_last < 0:
             color = "red"
         else:
