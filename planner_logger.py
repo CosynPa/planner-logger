@@ -88,6 +88,20 @@ class ContinuingLogItem(LogItem):
 
         return time_diff_first, time_diff_last
 
+    def effective_duration(self) -> float:
+        """The effective duration of this plan. It's the last duration if that is set,
+         or the actual duration otherwise.
+
+         The benefit of using this duration is that
+         you can accomplish some amount of effective time with less actual time.
+         """
+        last_duration = time_helper.parse_duration(self.plan.last_duration)
+
+        if last_duration is not None:
+            return last_duration
+        else:
+            return self.total_duration()
+
     def is_head(self) -> bool:
         return self.next_log is not None and self.previous_log is None
 
@@ -671,13 +685,13 @@ class PlannerLoggerController:
                     marked_plus += time_diff_last
                 else:
                     marked_minus += time_diff_last
-                marked_total += log.total_duration()
+                marked_total += log.effective_duration()
             else:
                 if time_diff_last >= 0:
                     not_marked_plus += time_diff_last
                 else:
                     not_marked_minus += time_diff_last
-                not_marked_total += log.total_duration()
+                not_marked_total += log.effective_duration()
 
         layout = widgets.Layout(width="90%", max_width="90%")
 
