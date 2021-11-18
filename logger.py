@@ -41,6 +41,10 @@ class LogItem:
         else:
             return 0.
 
+    def effective_duration(self) -> float:
+        """ContinuingLogItem has this method overridden"""
+        return self.duration()
+
     @staticmethod
     def item_htmls(logs: List["LogItem"], colon_indicate_title: bool, highlights: Optional[List[str]] = None, highlight_color=None):
         highlights = [text.lower() for text in highlights] if highlights is not None else []
@@ -76,10 +80,10 @@ class LogItem:
             matched = next((merged for merged in merged_items if should_merge(merged, item)),
                            None)
             if matched is not None:
-                matched.duration += item.duration()
+                matched.duration += item.effective_duration()
                 matched.mark_type |= mark_type
             else:
-                merged_items.append(MergedItem(merged_name(item), item.duration(), mark_type))
+                merged_items.append(MergedItem(merged_name(item), item.effective_duration(), mark_type))
 
         for merged in merged_items:
             merged.is_highlighted = merged.name.lower().strip() != "" and merged.name.lower().strip() in highlights
