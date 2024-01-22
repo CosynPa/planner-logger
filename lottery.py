@@ -1,6 +1,7 @@
 import datetime
 from dataclasses import dataclass
 import random
+from typing import Optional
 
 from time_helper import parse_duration, time_str, duration_str
 
@@ -33,7 +34,7 @@ class LotteryContext:
 random.seed()
 
 
-def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, store: bool,
+def draw_lottery(actual: str, first_plan: Optional[str], second_plan: Optional[str], winning: str, store: bool,
                  setting: LotterySetting, context: LotteryContext):
     """Draw the lottery
 
@@ -48,6 +49,12 @@ def draw_lottery(actual: str, first_plan: str, second_plan: str, winning: str, s
     :return: When win, returns "You win!!!" otherwise some random encouraging sentences.
     """
 
+    if second_plan is None:
+        second_plan = actual
+        
+    if first_plan is None:
+        first_plan = second_plan
+    
     actual_duration: float = parse_duration(actual)
     first_plan_duration: float = parse_duration(first_plan)
     second_plan_duration: float = parse_duration(second_plan)
