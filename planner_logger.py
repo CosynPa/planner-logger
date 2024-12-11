@@ -208,7 +208,7 @@ class PlannerLoggerItemBox(widgets.HBox):
             controller.update_link()
             controller.update_summary_and_save()
 
-        name.observe(debounce.debounced(0.1)(on_name_change), "value")
+        name.observe(on_name_change, "value")
 
         def on_first_duration_change(change):
             if self.is_updating:
